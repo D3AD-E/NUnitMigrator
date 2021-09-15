@@ -16,8 +16,8 @@ namespace NUnitMigrator.Core.Rewriter
         //or syntaxlist?
         public readonly List<AttributeSyntax> AddedAttributes;
         public readonly List<AttributeSyntax> RemovedAttributes;
-        public MethodDeclarationSyntax CurrentMethod;
-        public bool NeedsStaticModifier;
+        public MethodDeclarationSyntax CurrentMethod { get; set; }
+        public bool NeedsStaticModifier { get; set; }
 
         public MethodState()
         {

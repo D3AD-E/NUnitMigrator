@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace NUnitMigrator.Core.Rewriter
 {
-    public class RewriterError
+    public class UnsupportedNodeInfo
     {
         public string Info;
 

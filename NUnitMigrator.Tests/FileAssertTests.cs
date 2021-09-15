@@ -24,7 +24,6 @@ public class A
             const string expected = @"
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.IO;
-[TestClass]
 public class A
 {
     public void Test()
@@ -55,7 +54,6 @@ public class A
             const string expected = @"
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.IO;
-[TestClass]
 public class A
 {
     public void Test()
@@ -86,7 +84,6 @@ public class A
             const string expected = @"
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.IO;
-[TestClass]
 public class A
 {
     public void Test()
@@ -117,7 +114,6 @@ public class A
             const string expected = @"
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.IO;
-[TestClass]
 public class A
 {
     public void Test()

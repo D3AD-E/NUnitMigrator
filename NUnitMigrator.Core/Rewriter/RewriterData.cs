@@ -11,24 +11,9 @@ namespace NUnitMigrator.Core.Rewriter
     //Taken from legacy code
     public class RewriterData
     {
-        
-
         //attributes
         public class NUnitData
         {
-            public static Regex AuthorRegex = new Regex(@"Author.*");
-            public static Regex CategoryRegex = new Regex(@"Category.*");
-            public static Regex DescriptionRegex = new Regex(@"Description.*");
-            public static Regex ExcludePlatformRegex = new Regex(@"ExcludePlatform.*");
-            public static Regex ExpectedResultRegex = new Regex(@"ExpectedResult.*");
-            public static Regex ExplicitRegex = new Regex(@"Explicit.*");
-            public static Regex IgnoreRegex = new Regex(@"Ignore.*");
-            public static Regex IgnoreReasonRegex = new Regex(@"IgnoreReason.*");
-            public static Regex IncludePlatformRegex = new Regex(@"IncludePlatform.*");
-            public static Regex ReasonRegex = new Regex(@"Reason.*");
-            public static Regex TestNameRegex = new Regex(@"TestName.*");
-            public static Regex TestOfRegex = new Regex(@"TestOf.*");
-
             public const string APARTMENT_ATTRIBUTE = "Apartment";
             public const string AUTHOR_ATTRIBUTE = "Author";
             public const string CATEGORY_ATTRIBUTE = "Category";

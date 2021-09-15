@@ -16,7 +16,7 @@ namespace NUnitMigrator.Tests
         public class TestResult
         {
             public string Text;
-            public List<RewriterError> Errors;
+            public List<UnsupportedNodeInfo> Errors;
         }
         public static TestResult RunTest(string input)
         {
@@ -44,7 +44,7 @@ namespace NUnitMigrator.Tests
             var text = rewriter.Visit(tree.GetRoot());
             TestResult result = new TestResult
             {
-                Errors = rewriter.Errors,
+                Errors = rewriter.Unsupported,
                 Text = text.ToFullString()
             };
 

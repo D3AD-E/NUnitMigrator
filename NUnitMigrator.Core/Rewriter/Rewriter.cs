@@ -9,7 +9,7 @@ namespace NUnitMigrator.Core.Rewriter
 {
     public class Rewriter : CSharpSyntaxRewriter
     {
-        public readonly List<RewriterError> Errors;
+        public readonly List<UnsupportedNodeInfo> Unsupported;
         private readonly SemanticModel _semanticModel;
 
         private readonly MethodState _methodState;
@@ -20,7 +20,7 @@ namespace NUnitMigrator.Core.Rewriter
             _semanticModel = model;
             _methodState = new MethodState();
             _classState = new ClassState();
-            Errors = new List<RewriterError>();
+            Unsupported = new List<UnsupportedNodeInfo>();
         }
 
 
@@ -30,10 +30,6 @@ namespace NUnitMigrator.Core.Rewriter
             node = base.VisitClassDeclaration(node) as ClassDeclarationSyntax;
             if (node != null)
             {
-                if (_classState.IsClassAtrributeNeeded)
-                {
-                    node = node.AddAttributeWithName(RewriterData.MSTestData.TEST_CLASS_ATTRIBUTE);
-                }
                 if (_classState.RemovedAttributes.Count > 0)
                 {
                     foreach (var attribute in _classState.RemovedAttributes)
@@ -91,7 +87,6 @@ namespace NUnitMigrator.Core.Rewriter
                     if (attribute.ArgumentList != null && attribute.ArgumentList.Arguments.Count > 0)
                         throw new NotImplementedException();
                     attribute = attribute.WithName(SyntaxFactory.IdentifierName(RewriterData.MSTestData.TEST_CLASS_ATTRIBUTE));
-                    _classState.IsClassAtrributeNeeded = false;
                     break;
                 case RewriterData.NUnitData.NON_PARALLELIZABLE_ATTRIBUTE:
                     attribute = attribute.WithName(SyntaxFactory.IdentifierName(RewriterData.MSTestData.DO_NOT_PARRELELIZE_ATTRIBUTE));
@@ -131,6 +126,7 @@ namespace NUnitMigrator.Core.Rewriter
                     attribute = attribute.WithName(SyntaxFactory.IdentifierName(RewriterData.MSTestData.DESCRIPTION_ATTRIBUTE));
                     break;
                 case RewriterData.NUnitData.TCS_ATTRIBUTE:
+                case RewriterData.NUnitData.VALUES_SOURCE_ATTRIBUTE:
                     attribute = TransformTCSAttribute(attribute);
                     break;
                 case RewriterData.NUnitData.AUTHOR_ATTRIBUTE:
@@ -199,7 +195,7 @@ namespace NUnitMigrator.Core.Rewriter
                         var symbolType = symbol.Symbol?.ContainingType?.ToDisplayString();
                         if (symbolType != null && symbolType.StartsWith("NUnit."))
                         {
-                            Errors.Add(new RewriterError
+                            Unsupported.Add(new UnsupportedNodeInfo
                             {
                                 Info = "Attribute is not supported",
                                 Location = attribute.GetLocation(),
@@ -212,99 +208,50 @@ namespace NUnitMigrator.Core.Rewriter
             return attribute;
         }
 
-        //mostly legacy code
         private AttributeSyntax TransformTestCaseAttribute(AttributeSyntax attribute)
         {
             attribute = attribute.WithName(SyntaxFactory.IdentifierName(RewriterData.MSTestData.DATA_ROW_ATTRIBUTE));
             _methodState.AddedAttributes.Add(SyntaxFactory.Attribute(SyntaxFactory.ParseName(RewriterData.MSTestData.TEST_METHOD_ATTRIBUTE)));
-
-            AttributeArgumentSyntax explicitArgument = null;
-            AttributeArgumentSyntax ignoreArgument = null;
-            AttributeArgumentSyntax reasonArgument = null;
-
-            attribute.ArgumentList.Arguments.ToList().ForEach(arg =>
+            var savedArguments = new SeparatedSyntaxList<AttributeArgumentSyntax>();
+            foreach (var argument in attribute.ArgumentList.Arguments)
             {
-                var argument = arg.ToString();
-                if (RewriterData.NUnitData.TestNameRegex.IsMatch(argument))
+                var argName = argument.NameEquals?.Name?.ToString();
+                switch (argName)
                 {
-                    SeparatedSyntaxList<AttributeArgumentSyntax> argumentsList = new SeparatedSyntaxList<AttributeArgumentSyntax>();
-                    argumentsList = argumentsList.Add(SyntaxFactory.AttributeArgument(SyntaxFactory.ParseExpression("\"TestName\"")));
-                    argumentsList = argumentsList.Add(SyntaxFactory.AttributeArgument(arg.Expression));
-                    AttributeArgumentListSyntax argumentListSyntax = SyntaxFactory.AttributeArgumentList(argumentsList);
-                    AttributeSyntax newAttribute = SyntaxFactory.Attribute(SyntaxFactory.ParseName("TestProperty"), argumentListSyntax);
-                    _methodState.AddedAttributes.Add(newAttribute);
+                    case "TestName":
+                        _methodState.AddedAttributes.Add(MSTestSyntaxFactory.CreateAttribute("TestProperty", new List<ExpressionSyntax>
+                            { 
+                                SyntaxFactory.ParseExpression("\"TestName\""),
+                                argument.Expression
+                            }));
+                        break;
+                    case "Author":
+                        _methodState.AddedAttributes.Add(MSTestSyntaxFactory.CreateAttribute("Owner", argument.Expression));
+                        break;
+                    case "Category":
+                        _methodState.AddedAttributes.Add(MSTestSyntaxFactory.CreateAttribute("TestCategory", argument.Expression));
+                        break;
+                    case "Description":
+                        _methodState.AddedAttributes.Add(MSTestSyntaxFactory.CreateAttribute("Description", argument.Expression));
+                        break;
+                    case "Explicit":
+                        _methodState.AddedAttributes.Add(MSTestSyntaxFactory.CreateAttribute("Explicit", argument.Expression));
+                        break;
+                    case "Ignore":
+                    case "IgnoreReason":
+                    case "Reason":
+                        _methodState.AddedAttributes.Add(MSTestSyntaxFactory.CreateAttribute("Ignore", argument.Expression));
+                        break;
+                    case "TestOf":
+                        _methodState.AddedAttributes.Add(MSTestSyntaxFactory.CreateAttribute("Description", 
+                            SyntaxFactory.ParseExpression("\"" + argument.Expression + "\"")));
+                        break;
+                    default:
+                        savedArguments = savedArguments.Add(argument);
+                        break;
                 }
-                else if (RewriterData.NUnitData.AuthorRegex.IsMatch(argument))
-                {
-                    SeparatedSyntaxList<AttributeArgumentSyntax> argumentsList = new SeparatedSyntaxList<AttributeArgumentSyntax>();
-                    argumentsList = argumentsList.Add(SyntaxFactory.AttributeArgument(arg.Expression));
-                    AttributeArgumentListSyntax argumentListSyntax = SyntaxFactory.AttributeArgumentList(argumentsList);
-                    AttributeSyntax newAttribute = SyntaxFactory.Attribute(SyntaxFactory.ParseName("Owner"), argumentListSyntax);
-                    _methodState.AddedAttributes.Add(newAttribute);
-                }
-                else if (RewriterData.NUnitData.CategoryRegex.IsMatch(argument))
-                {
-                    SeparatedSyntaxList<AttributeArgumentSyntax> argumentsList = new SeparatedSyntaxList<AttributeArgumentSyntax>();
-                    argumentsList = argumentsList.Add(SyntaxFactory.AttributeArgument(arg.Expression));
-                    AttributeArgumentListSyntax argumentListSyntax = SyntaxFactory.AttributeArgumentList(argumentsList);
-                    AttributeSyntax newAttribute = SyntaxFactory.Attribute(SyntaxFactory.ParseName("TestCategory"), argumentListSyntax);
-                    _methodState.AddedAttributes.Add(newAttribute);
-
-                }
-                else if (RewriterData.NUnitData.DescriptionRegex.IsMatch(argument))
-                {
-                    SeparatedSyntaxList<AttributeArgumentSyntax> argumentsList = new SeparatedSyntaxList<AttributeArgumentSyntax>();
-                    argumentsList = argumentsList.Add(SyntaxFactory.AttributeArgument(arg.Expression));
-                    AttributeArgumentListSyntax argumentListSyntax = SyntaxFactory.AttributeArgumentList(argumentsList);
-                    AttributeSyntax newAttribute = SyntaxFactory.Attribute(SyntaxFactory.ParseName("Description"), argumentListSyntax);
-                    _methodState.AddedAttributes.Add(newAttribute);
-                }
-                else if (RewriterData.NUnitData.ExplicitRegex.IsMatch(argument))
-                {
-                    explicitArgument = arg;
-                }
-                else if (RewriterData.NUnitData.IgnoreRegex.IsMatch(argument))
-                {
-                    ignoreArgument = arg;
-                }
-                else if (RewriterData.NUnitData.IgnoreReasonRegex.IsMatch(argument))
-                {
-                    ignoreArgument = arg;
-                }
-                else if (RewriterData.NUnitData.ReasonRegex.IsMatch(argument))
-                {
-                    reasonArgument = arg;
-                }
-                else if (RewriterData.NUnitData.TestOfRegex.IsMatch(argument))
-                {
-                    SeparatedSyntaxList<AttributeArgumentSyntax> argumentsList = new SeparatedSyntaxList<AttributeArgumentSyntax>();
-                    argumentsList = argumentsList.Add(SyntaxFactory.AttributeArgument(SyntaxFactory.ParseExpression("\"" + arg.Expression + "\"")));
-                    AttributeArgumentListSyntax argumentListSyntax = SyntaxFactory.AttributeArgumentList(argumentsList);
-                    AttributeSyntax newAttribute = SyntaxFactory.Attribute(SyntaxFactory.ParseName("Description"), argumentListSyntax);
-                    _methodState.AddedAttributes.Add(newAttribute);
-                }
-
-            });
-            if (explicitArgument != null && explicitArgument.Expression.ToString().Equals("true"))
-            {
-                AttributeSyntax newAttribute = SyntaxFactory.Attribute(SyntaxFactory.ParseName("Explicit"));
-                if (reasonArgument != null)
-                {
-                    SeparatedSyntaxList<AttributeArgumentSyntax> argumentsList = new SeparatedSyntaxList<AttributeArgumentSyntax>();
-                    argumentsList = argumentsList.Add(SyntaxFactory.AttributeArgument(reasonArgument.Expression));
-                    AttributeArgumentListSyntax argumentListSyntax = SyntaxFactory.AttributeArgumentList(argumentsList);
-                    newAttribute = newAttribute.WithArgumentList(argumentListSyntax);
-                }
-                _methodState.AddedAttributes.Add(newAttribute);
             }
-            if (ignoreArgument != null)
-            {
-                SeparatedSyntaxList<AttributeArgumentSyntax> argumentsList = new SeparatedSyntaxList<AttributeArgumentSyntax>();
-                argumentsList = argumentsList.Add(SyntaxFactory.AttributeArgument(ignoreArgument.Expression));
-                AttributeArgumentListSyntax argumentListSyntax = SyntaxFactory.AttributeArgumentList(argumentsList);
-                AttributeSyntax newAttribute = SyntaxFactory.Attribute(SyntaxFactory.ParseName("Ignore"), argumentListSyntax);
-                _methodState.AddedAttributes.Add(newAttribute);
-            }
+            attribute = attribute.WithArgumentList(SyntaxFactory.AttributeArgumentList(savedArguments));
             return attribute;
         }
 
@@ -353,7 +300,7 @@ namespace NUnitMigrator.Core.Rewriter
 
             if (!supported)
             {
-                Errors.Add(new RewriterError
+                Unsupported.Add(new UnsupportedNodeInfo
                 {
                     Info = "Syntax is not supported",
                     Location = attribute.GetLocation(),
@@ -375,7 +322,7 @@ namespace NUnitMigrator.Core.Rewriter
             }
             else
             {
-                Errors.Add(new RewriterError
+                Unsupported.Add(new UnsupportedNodeInfo
                 {
                     Info = "Must be a method or a property",
                     Location = attribute.GetLocation(),
@@ -487,24 +434,50 @@ namespace NUnitMigrator.Core.Rewriter
                     if (node.ArgumentList.Arguments.Count >= 2)
                     {
                         var secondArgument = node.ArgumentList?.Arguments[1];
+                        if(secondArgument.ToString().StartsWith("Throws"))
+                        {
+                            var remainingArguments = new SeparatedSyntaxList<ArgumentSyntax>();
+                            remainingArguments = remainingArguments.AddRange(node.ArgumentList.Arguments.Skip(2));
+
+                            var details = new ExceptionSyntaxData();
+                            if (ExceptionParser.TryGetException(secondArgument, details) ||
+                                ExceptionParser.TryGetExceptionDetails(secondArgument, "TypeOf", details))
+                            {
+                                if (details.Supported)
+                                {
+                                    node = MSTestSyntaxFactory.ThrowsExceptionSyntax(node.ArgumentList.Arguments[0].Expression,
+                                            details, remainingArguments)
+                                        .WithLeadingTrivia(node.GetClosestWhitespaceTrivia(true));
+                                    return node;
+                                }
+                                else
+                                {
+                                    Unsupported.Add(new UnsupportedNodeInfo
+                                    {
+                                        Info = "Unsupported exception constraint expression",
+                                        Location = node.GetLocation(),
+                                        NodeName = node.ToString()
+                                    });
+                                }
+                            }
+                        }
                         if (secondArgument.Expression is MemberAccessExpressionSyntax constraintMemberAccess)
                         {
                             node = TransformConstraintAssertion(node, memberAccess, constraintMemberAccess);
                         }
-                        else if(secondArgument.Expression is InvocationExpressionSyntax constraintInvocationExpression 
+                        else if (secondArgument.Expression is InvocationExpressionSyntax constraintInvocationExpression
                             && constraintInvocationExpression.Expression is MemberAccessExpressionSyntax invocationConstraintMA)
                         {
                             node = TransformConstraintAssertion(node, memberAccess, invocationConstraintMA);
                         }
                         else if (_semanticModel.HasBooleanResult(node.ArgumentList.Arguments[0].Expression))
                         {
-                            //this is bad
                             memberAccess = memberAccess.WithName(SyntaxFactory.IdentifierName("IsTrue"));
                             node = node.WithExpression(memberAccess);
                         }
                         else
                         {
-                            Errors.Add(new RewriterError
+                            Unsupported.Add(new UnsupportedNodeInfo
                             {
                                 Info = "Unsupported invocation expression",
                                 Location = node.GetLocation(),
@@ -522,7 +495,7 @@ namespace NUnitMigrator.Core.Rewriter
                         }
                         else
                         {
-                            Errors.Add(new RewriterError
+                            Unsupported.Add(new UnsupportedNodeInfo
                             {
                                 Info = "Unsupported invocation expression",
                                 Location = node.GetLocation(),
@@ -571,12 +544,12 @@ namespace NUnitMigrator.Core.Rewriter
                 }
                 else if ("Zero".Equals(memberName))
                 {
-                    node = TransformComparisonExpression(node, memberAccess, SyntaxKind.EqualsExpression, 
+                    node = MSTestSyntaxFactory.CreateComparisonExpression(node, memberAccess, SyntaxKind.EqualsExpression, 
                         node.ArgumentList.Arguments[0].Expression, SyntaxFactory.ParseExpression("0"), 1);
                 }
                 else if ("NotZero".Equals(memberName))
                 {
-                    node = TransformComparisonExpression(node, memberAccess, SyntaxKind.NotEqualsExpression, 
+                    node = MSTestSyntaxFactory.CreateComparisonExpression(node, memberAccess, SyntaxKind.NotEqualsExpression, 
                         node.ArgumentList.Arguments[0].Expression, SyntaxFactory.ParseExpression("0"), 1);
                 }
                 else if ("IsInstanceOf".Equals(memberAccess.Name?.Identifier.ToString()))
@@ -585,12 +558,12 @@ namespace NUnitMigrator.Core.Rewriter
                 }
                 else if ("Positive".Equals(memberName))
                 {
-                    node = TransformComparisonExpression(node, memberAccess, SyntaxKind.GreaterThanExpression,
+                    node = MSTestSyntaxFactory.CreateComparisonExpression(node, memberAccess, SyntaxKind.GreaterThanExpression,
                         node.ArgumentList.Arguments[0].Expression, SyntaxFactory.ParseExpression("0"), 1);
                 }
                 else if ("Negative".Equals(memberName))
                 {
-                    node = TransformComparisonExpression(node, memberAccess, SyntaxKind.LessThanExpression,
+                    node = MSTestSyntaxFactory.CreateComparisonExpression(node, memberAccess, SyntaxKind.LessThanExpression,
                         node.ArgumentList.Arguments[0].Expression, SyntaxFactory.ParseExpression("0"), 1);
                 }
                 else if ("IsEmpty".Equals(memberName))
@@ -607,7 +580,7 @@ namespace NUnitMigrator.Core.Rewriter
                 }
                 else
                 {
-                    Errors.Add(new RewriterError
+                    Unsupported.Add(new UnsupportedNodeInfo
                     {
                         Info = "Unsupported assertion expression",
                         Location = node.GetLocation(),
@@ -627,9 +600,17 @@ namespace NUnitMigrator.Core.Rewriter
                     //ignored
                     return node;
                 }
+                else if ("IsEmpty".Equals(memberName))
+                {
+                    node = TransformCollectionEmpty(node, collectionMemberAccess, true);
+                }
+                else if ("IsNotEmpty".Equals(memberName))
+                {
+                    node = TransformCollectionEmpty(node, collectionMemberAccess, false);
+                }
                 else
                 {
-                    Errors.Add(new RewriterError
+                    Unsupported.Add(new UnsupportedNodeInfo
                     {
                         Info = "Unsupported collection assert expression",
                         Location = node.GetLocation(),
@@ -646,9 +627,13 @@ namespace NUnitMigrator.Core.Rewriter
                     //ignored
                     return node;
                 }
+                else if("IsMatch".Equals(memberName))
+                {
+                    node = TransformIsMatchExpression(node, stringMemberAccess);
+                }
                 else
                 {
-                    Errors.Add(new RewriterError
+                    Unsupported.Add(new UnsupportedNodeInfo
                     {
                         Info = "Unsupported string assert expression",
                         Location = node.GetLocation(),
@@ -670,7 +655,7 @@ namespace NUnitMigrator.Core.Rewriter
                 }
                 else
                 {
-                    Errors.Add(new RewriterError
+                    Unsupported.Add(new UnsupportedNodeInfo
                     {
                         Info = "Unsupported directory assert expression",
                         Location = node.GetLocation(),
@@ -692,7 +677,7 @@ namespace NUnitMigrator.Core.Rewriter
                 }
                 else
                 {
-                    Errors.Add(new RewriterError
+                    Unsupported.Add(new UnsupportedNodeInfo
                     {
                         Info = "Unsupported directory assert expression",
                         Location = node.GetLocation(),
@@ -702,7 +687,7 @@ namespace NUnitMigrator.Core.Rewriter
             }
             else if(frameworkInfo?.StartsWith("NUnit.") ?? false)
             {
-                Errors.Add(new RewriterError
+                Unsupported.Add(new UnsupportedNodeInfo
                 {
                     Info = "Unsupported assert expression",
                     Location = node.GetLocation(),
@@ -713,54 +698,113 @@ namespace NUnitMigrator.Core.Rewriter
             return node;
         }
 
+        private InvocationExpressionSyntax TransformIsMatchExpression(InvocationExpressionSyntax node, MemberAccessExpressionSyntax memberAccess)
+        {
+            var arg0 = node.ArgumentList.Arguments[0];
+            var arg1 = node.ArgumentList.Arguments[1];
+
+            var matchTypeArgument = SyntaxFactory.Argument(MSTestSyntaxFactory.CreateObjectInstance(typeof(System.Text.RegularExpressions.Regex).FullName,
+                            arg1)).NormalizeWhitespace();
+            node = TransformSimpleAssertWithArguments(node, memberAccess, "Matches", arg0, matchTypeArgument);
+            return node;
+        }
+
+        private InvocationExpressionSyntax TransformCollectionEmpty(InvocationExpressionSyntax node, MemberAccessExpressionSyntax memberAccess, bool isEmpty)
+        {
+            if (node.ArgumentList == null)
+            {
+                Unsupported.Add(new UnsupportedNodeInfo
+                {
+                    Info = "Unsupported DirectoryAssert expression",
+                    Location = node.GetLocation(),
+                    NodeName = node.ToString()
+                });
+                return node;
+            }
+            var arg = node.ArgumentList.Arguments[0];
+
+            var argList = new SeparatedSyntaxList<ArgumentSyntax>();
+            var isEmptyExpression = SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression,
+                arg.Expression, SyntaxFactory.IdentifierName("Count"));
+
+            var binaryExpression = SyntaxFactory.BinaryExpression(SyntaxKind.EqualsExpression, isEmptyExpression, SyntaxFactory.ParseExpression("0"));
+            argList = argList.Add(SyntaxFactory.Argument(binaryExpression));
+
+            var remainingArguments = node.ArgumentList.Arguments.Skip(1);
+            if (remainingArguments.Any())
+                argList = argList.AddRange(remainingArguments);
+
+            var trivia = memberAccess.GetLeadingTrivia();
+
+            memberAccess = isEmpty ?
+                memberAccess.WithName(SyntaxFactory.IdentifierName("IsTrue"))
+                : memberAccess.WithName(SyntaxFactory.IdentifierName("IsFalse"));
+
+            memberAccess = memberAccess.WithExpression(SyntaxFactory.IdentifierName("Assert"))
+                .WithLeadingTrivia(trivia);
+            node = node.WithExpression(memberAccess).WithArgumentList(
+                SyntaxFactory.ArgumentList(argList).NormalizeWhitespace());
+
+            return node;
+        }
+
         private InvocationExpressionSyntax TransformConstraintAssertion(InvocationExpressionSyntax node, 
             MemberAccessExpressionSyntax memberAccess, MemberAccessExpressionSyntax constraintMemberAccess)
         {
-            var constraintName = constraintMemberAccess.Name?.ToString();
             //check if we have "not"
             bool hasNot = constraintMemberAccess.Expression is MemberAccessExpressionSyntax internalConstraintMA
                 && internalConstraintMA.Name.ToString().Equals("Not");
-            if ("EqualTo".Equals(constraintName))
+            var contstraintType = constraintMemberAccess.Expression.ToString();
+
+            var arg = node.ArgumentList.Arguments[0];
+            var type = _semanticModel.GetTypeInfo(arg.Expression);
+
+
+            if (type.ConvertedType?.SpecialType == SpecialType.System_String)
             {
-                node = TransformEqualToConstraint(node, memberAccess, hasNot);
+                node = TransformStringConstraints(node, memberAccess, constraintMemberAccess, hasNot, out bool hasChanged);
+                if (hasChanged)
+                    return node;
             }
-            else if ("Null".Equals(constraintName))
+            if (contstraintType.StartsWith("Is.All"))
             {
-                node = hasNot ? TransformSimpleConstraint(node, memberAccess, "IsNotNull") :
-                    TransformSimpleConstraint(node, memberAccess, "IsNull");
+                node = TransformIsAllConstraints(node, memberAccess, constraintMemberAccess, hasNot);
             }
-            else if(!hasNot)
+            else if (contstraintType.StartsWith("Is"))
             {
-                //so we will not translate not true to true etc.
-                if ("True".Equals(constraintName))
-                {
-                    node = TransformSimpleConstraint(node, memberAccess, "IsTrue");
-                }
-                else if ("False".Equals(constraintName))
-                {
-                    node = TransformSimpleConstraint(node, memberAccess, "IsFalse");
-                }
-                else if ("LessThan".Equals(constraintName) ||
-                         "LessThanOrEqualTo".Equals(constraintName) ||
-                         "GreaterThan".Equals(constraintName) ||
-                         "GreaterThanOrEqualTo".Equals(constraintName))
-                {
-                    node = TransformGreaterLessConstraint(node, memberAccess, constraintMemberAccess);
-                }
-                else if ("Positive".Equals(constraintName))
-                {
-                    node = TransformComparisonExpression(node, memberAccess, SyntaxKind.GreaterThanExpression,
-                       node.ArgumentList.Arguments[0].Expression, SyntaxFactory.ParseExpression("0"), 2);
-                }
-                else if ("Negative".Equals(constraintName))
-                {
-                    node = TransformComparisonExpression(node, memberAccess, SyntaxKind.LessThanExpression,
-                       node.ArgumentList.Arguments[0].Expression, SyntaxFactory.ParseExpression("0"), 2);
-                }
+                node = TransformIsConstraints(node, memberAccess, constraintMemberAccess, hasNot);
+            }
+            else if (contstraintType.StartsWith("Does"))
+            {
+                node = TransformDoesConstraints(node, memberAccess, constraintMemberAccess, hasNot);
+            }
+            else if (contstraintType.StartsWith("Contains"))
+            {
+                node = TransformContainsConstraints(node, memberAccess, constraintMemberAccess, hasNot);
+            }
+            else if (contstraintType.StartsWith("Has"))
+            {
+                node = TransformHasConstraints(node, memberAccess, constraintMemberAccess, hasNot);
+            }
+            return node;
+        }
+
+        private InvocationExpressionSyntax TransformIsAllConstraints(InvocationExpressionSyntax node, MemberAccessExpressionSyntax memberAccess, MemberAccessExpressionSyntax constraintMemberAccess, bool hasNot)
+        {
+            var constraintName = constraintMemberAccess.Name?.ToString();
+            if ("Null".Equals(constraintName) && hasNot)
+            {
+                node = TransformSimpleConstraint(node, memberAccess, "AllItemsAreNotNull");
+                node = node.ChangeName("CollectionAssert");
+            }
+            else if("Unique".Equals(constraintName) && !hasNot)
+            {
+                node = TransformSimpleConstraint(node, memberAccess, "AllItemsAreUnique");
+                node = node.ChangeName("CollectionAssert");
             }
             else
             {
-                Errors.Add(new RewriterError
+                Unsupported.Add(new UnsupportedNodeInfo
                 {
                     Info = "Unsupported  constraint invocation expression",
                     Location = node.GetLocation(),
@@ -770,8 +814,560 @@ namespace NUnitMigrator.Core.Rewriter
             return node;
         }
 
+        private InvocationExpressionSyntax TransformHasConstraints(InvocationExpressionSyntax node, MemberAccessExpressionSyntax memberAccess, MemberAccessExpressionSyntax constraintMemberAccess, bool hasNot)
+        {
+            var constraintName = constraintMemberAccess.Name?.ToString();
+            if ("Member".Equals(constraintName))
+            {
+                node = TransformContainsCollectionConstraint(node, memberAccess, hasNot);
+            }
+            else if ("Exactly".Equals(constraintName))
+            {
+                node = TransformCollectionExactlyConstraint(node, memberAccess, hasNot);
+            }
+            return node;
+        }
+
+        private InvocationExpressionSyntax TransformCollectionExactlyConstraint(InvocationExpressionSyntax node, 
+            MemberAccessExpressionSyntax memberAccess, bool hasNot)
+        {
+            var arg1 = node.ArgumentList.Arguments[1];
+            if (arg1.Expression is InvocationExpressionSyntax invocationExpression)
+            {
+                var amount = invocationExpression.ArgumentList.Arguments[0].ToString();
+                node = TransformCollectionAmountConstraint(node, memberAccess, hasNot, amount);
+            }
+            else
+            {
+                Unsupported.Add(new UnsupportedNodeInfo
+                {
+                    Info = "Unsupported CollectionExactly constraint",
+                    Location = node.GetLocation(),
+                    NodeName = node.ToString()
+                });
+            }
+            return node;
+        }
+
+        private InvocationExpressionSyntax TransformContainsCollectionConstraint(InvocationExpressionSyntax node, 
+            MemberAccessExpressionSyntax memberAccess, bool hasNot)
+        {
+            var arg0 = node.ArgumentList.Arguments[0];
+            var arg1 = node.ArgumentList.Arguments[1];
+            if (arg1.Expression is InvocationExpressionSyntax arg1Expression)
+            {
+                var nodeName = hasNot ? "DoesNotContain" : "Contains";
+                var newArg1 = arg1Expression.ArgumentList.Arguments[0];
+                node = TransformSimpleAssertWithArguments(node, memberAccess, nodeName, arg0, newArg1);
+            }
+            else
+            {
+                Unsupported.Add(new UnsupportedNodeInfo
+                {
+                    Info = "Unsupported ContainsConstraint",
+                    Location = node.GetLocation(),
+                    NodeName = node.ToString()
+                });
+            }
+
+            return node;
+        }
+
+        private InvocationExpressionSyntax TransformContainsConstraints(InvocationExpressionSyntax node, 
+            MemberAccessExpressionSyntax memberAccess, MemberAccessExpressionSyntax constraintMemberAccess, bool hasNot)
+        {
+            var constraintName = constraintMemberAccess.Name?.ToString();
+            if ("Item".Equals(constraintName))
+            {
+                node = TransformContainsCollectionConstraint(node, memberAccess, hasNot);
+            }
+            else if ("Key".Equals(constraintName))
+            {
+                node = TransformContainsKeyConstraint(node, memberAccess, hasNot);
+            }
+            else if ("Value".Equals(constraintName))
+            {
+                node = TransformContainsValueConstraint(node, memberAccess, hasNot);
+            }
+            return node;
+        }
+
+        private InvocationExpressionSyntax TransformContainsValueConstraint(InvocationExpressionSyntax node, MemberAccessExpressionSyntax memberAccess, bool hasNot)
+        {
+            var arg0 = node.ArgumentList.Arguments[0];
+            var arg1 = node.ArgumentList.Arguments[1];
+
+            if (arg1.Expression is InvocationExpressionSyntax invocationExpression)
+            {
+                var containsKey = SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression,
+                    arg0.Expression, SyntaxFactory.IdentifierName("ContainsValue"));
+
+                var argList = new SeparatedSyntaxList<ArgumentSyntax>();
+                argList = argList.Add(invocationExpression.ArgumentList.Arguments[0]);
+
+                var newArg = SyntaxFactory.Argument(SyntaxFactory.InvocationExpression(containsKey,
+                    SyntaxFactory.ArgumentList(argList)));
+                var nodeName = hasNot ? "IsFalse" : "IsTrue";
+                node = TransformSimpleAssertWithArguments(node, memberAccess, nodeName, newArg);
+            }
+            else
+            {
+                Unsupported.Add(new UnsupportedNodeInfo
+                {
+                    Info = "Unsupported ContainsKey arguments",
+                    Location = node.GetLocation(),
+                    NodeName = node.ToString()
+                });
+            }
+
+            return node;
+        }
+
+        private InvocationExpressionSyntax TransformContainsKeyConstraint(InvocationExpressionSyntax node, MemberAccessExpressionSyntax memberAccess, bool hasNot)
+        {
+            var arg0 = node.ArgumentList.Arguments[0];
+            var arg1 = node.ArgumentList.Arguments[1];
+
+            if (arg1.Expression is InvocationExpressionSyntax invocationExpression)
+            {
+                var containsKey = SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression,
+                    arg0.Expression, SyntaxFactory.IdentifierName("ContainsKey"));
+
+                var argList = new SeparatedSyntaxList<ArgumentSyntax>();
+                argList = argList.Add(invocationExpression.ArgumentList.Arguments[0]);
+
+                var newArg = SyntaxFactory.Argument(SyntaxFactory.InvocationExpression(containsKey,
+                    SyntaxFactory.ArgumentList(argList)));
+                var nodeName = hasNot ? "IsFalse" : "IsTrue";
+                node = TransformSimpleAssertWithArguments(node, memberAccess, nodeName, newArg);
+            }
+            else
+            {
+                Unsupported.Add(new UnsupportedNodeInfo
+                {
+                    Info = "Unsupported ContainsKey arguments",
+                    Location = node.GetLocation(),
+                    NodeName = node.ToString()
+                });
+            }
+
+            return node;
+        }
+
+        private InvocationExpressionSyntax TransformDoesConstraints(InvocationExpressionSyntax node, MemberAccessExpressionSyntax memberAccess, 
+            MemberAccessExpressionSyntax constraintMemberAccess, bool hasNot)
+        {
+            var constraintName = constraintMemberAccess.Name?.ToString();
+            if ("Exist".Equals(constraintName))
+            {
+                node = TransformExistDirectoryConstraint(node, memberAccess, hasNot);
+            }
+            else if ("ContainKey".Equals(constraintName))
+            {
+                node = TransformContainsKeyConstraint(node, memberAccess, hasNot);
+            }
+            else if ("ContainValue".Equals(constraintName))
+            {
+                node = TransformContainsValueConstraint(node, memberAccess, hasNot);
+            }
+            return node;
+        }
+
+        private InvocationExpressionSyntax TransformExistDirectoryConstraint(InvocationExpressionSyntax node, MemberAccessExpressionSyntax memberAccess, 
+            bool hasNot)
+        {
+            if (node.ArgumentList == null)
+            {
+                Unsupported.Add(new UnsupportedNodeInfo
+                {
+                    Info = "Unsupported Does.Exist expression",
+                    Location = node.GetLocation(),
+                    NodeName = node.ToString()
+                });
+                return node;
+            }
+            var arg = node.ArgumentList.Arguments[0];
+            var type = _semanticModel.GetTypeInfo(arg.Expression);
+
+            ExpressionSyntax directoryExists = null;
+            if (_semanticModel.TypeSymbolMatchesType(type.ConvertedType, typeof(System.IO.DirectoryInfo)))
+            {
+                directoryExists = SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression,
+                    arg.Expression, SyntaxFactory.IdentifierName("Exists"));
+            }
+            if (directoryExists is null)
+            {
+                Unsupported.Add(new UnsupportedNodeInfo
+                {
+                    Info = "Unsupported arguments in Does.Exist expression",
+                    Location = node.GetLocation(),
+                    NodeName = node.ToString()
+                });
+                return node;
+            }
+
+            var argList = new SeparatedSyntaxList<ArgumentSyntax>();
+            argList = argList.Add(SyntaxFactory.Argument(directoryExists));
+
+            var remainingArguments = node.ArgumentList.Arguments.Skip(2);
+            if (remainingArguments.Any())
+                argList = argList.AddRange(remainingArguments);
+
+            var trivia = memberAccess.GetLeadingTrivia();
+
+            memberAccess = hasNot ?
+                memberAccess.WithName(SyntaxFactory.IdentifierName("IsFalse")) :
+                memberAccess.WithName(SyntaxFactory.IdentifierName("IsTrue"));
+
+            memberAccess = memberAccess.WithExpression(SyntaxFactory.IdentifierName("Assert"))
+                .WithLeadingTrivia(trivia);
+            node = node.WithExpression(memberAccess).WithArgumentList(
+                SyntaxFactory.ArgumentList(argList).NormalizeWhitespace());
+
+            return node;
+        }
+
+        private InvocationExpressionSyntax TransformIsConstraints(InvocationExpressionSyntax node, MemberAccessExpressionSyntax memberAccess, 
+             MemberAccessExpressionSyntax constraintMemberAccess, bool hasNot)
+        {
+            var constraintName = constraintMemberAccess.Name?.ToString();
+
+            if ("EqualTo".Equals(constraintName))
+            {
+                node = TransformEqualToConstraint(node, memberAccess, hasNot);
+            }
+            else if ("Null".Equals(constraintName))
+            {
+                node = hasNot ? TransformSimpleConstraint(node, memberAccess, "IsNotNull") :
+                    TransformSimpleConstraint(node, memberAccess, "IsNull");
+            }
+            else if ("NaN".Equals(constraintName))
+            {
+                node = TransformNaNConstraint(node, memberAccess, hasNot);
+            }
+            else if ("Empty".Equals(constraintName))
+            {
+                node = TransformCollectionAmountConstraint(node, memberAccess, hasNot, "0");
+            }
+            else if ("EquivalentTo".Equals(constraintName))
+            {
+                node = TransformEquivalentToConstraint(node, memberAccess, hasNot);
+            }
+            else if ("SubsetOf".Equals(constraintName))
+            {
+                node = TransformSubsetOfConstraint(node, memberAccess, hasNot);
+            }
+            else if ("True".Equals(constraintName))
+            {
+                node = hasNot ? TransformSimpleConstraint(node, memberAccess, "IsFalse") :
+                    TransformSimpleConstraint(node, memberAccess, "IsTrue");
+            }
+            else if ("False".Equals(constraintName))
+            {
+                node = hasNot ? TransformSimpleConstraint(node, memberAccess, "IsTrue") :
+                    TransformSimpleConstraint(node, memberAccess, "IsFalse");
+            }
+            else if ("Positive".Equals(constraintName))
+            {
+                node = MSTestSyntaxFactory.CreateComparisonExpression(node, memberAccess, SyntaxKind.GreaterThanExpression,
+                   node.ArgumentList.Arguments[0].Expression, SyntaxFactory.ParseExpression("0"), 2, !hasNot);
+            }
+            else if ("Negative".Equals(constraintName))
+            {
+                node = MSTestSyntaxFactory.CreateComparisonExpression(node, memberAccess, SyntaxKind.LessThanExpression,
+                   node.ArgumentList.Arguments[0].Expression, SyntaxFactory.ParseExpression("0"), 2, !hasNot);
+            }
+            else if ("LessThan".Equals(constraintName) ||
+                         "LessThanOrEqualTo".Equals(constraintName) ||
+                         "GreaterThan".Equals(constraintName) ||
+                         "GreaterThanOrEqualTo".Equals(constraintName))
+            {
+                node = TransformGreaterLessConstraint(node, memberAccess, constraintMemberAccess, hasNot);
+            }
+            else if (!hasNot)
+            {
+                if("TypeOf".Equals(constraintMemberAccess.Name?.Identifier.ToString()) || "InstanceOf".Equals(constraintMemberAccess.Name?.Identifier.ToString()))
+                {
+                    node = TransformTypeOfConstraint(node, memberAccess, constraintMemberAccess);
+                }
+            }
+            else
+            {
+                Unsupported.Add(new UnsupportedNodeInfo
+                {
+                    Info = "Unsupported  constraint invocation expression",
+                    Location = node.GetLocation(),
+                    NodeName = node.ToString()
+                });
+            }
+            return node;
+        }
+
+        private InvocationExpressionSyntax TransformCollectionAmountConstraint(InvocationExpressionSyntax node, 
+            MemberAccessExpressionSyntax memberAccess, bool hasNot, string amount)
+        {
+            var arg0 = node.ArgumentList.Arguments[0];
+           
+            var argCountExpression = SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression,
+                    arg0.Expression, SyntaxFactory.IdentifierName("Count"));
+
+            var binaryExpression = SyntaxFactory.BinaryExpression(SyntaxKind.EqualsExpression, argCountExpression,
+                SyntaxFactory.ParseExpression(amount));
+
+            var nodeName = hasNot ? "IsFalse" : "IsTrue";
+            node = TransformSimpleAssertWithArguments(node, memberAccess, nodeName, SyntaxFactory.Argument(binaryExpression));
+            return node;
+        }
+
+        private InvocationExpressionSyntax TransformSubsetOfConstraint(InvocationExpressionSyntax node, MemberAccessExpressionSyntax memberAccess, bool hasNot)
+        {
+            var arg0 = node.ArgumentList.Arguments[0];
+            var arg1 = node.ArgumentList.Arguments[1];
+            if (arg1.Expression is InvocationExpressionSyntax arg1Expression)
+            {
+                var nodeName = hasNot ? "IsNotSubsetOf" : "IsSubsetOf";
+                var newArg1 = arg1Expression.ArgumentList.Arguments[0];
+                node = TransformSimpleAssertWithArguments(node, memberAccess, nodeName, arg0, newArg1);
+            }
+            else
+            {
+                Unsupported.Add(new UnsupportedNodeInfo
+                {
+                    Info = "Unsupported SubsetOfConstraint",
+                    Location = node.GetLocation(),
+                    NodeName = node.ToString()
+                });
+            }
+
+            return node;
+        }
+
+        private InvocationExpressionSyntax TransformEquivalentToConstraint(InvocationExpressionSyntax node, MemberAccessExpressionSyntax memberAccess, bool hasNot)
+        {
+            var arg0 = node.ArgumentList.Arguments[0];
+            var arg1 = node.ArgumentList.Arguments[1];
+            if(arg1.Expression is InvocationExpressionSyntax arg1Expression)
+            {
+                var nodeName = hasNot ? "AreNotEquivalent" : "AreEquivalent";
+                var newArg1 = arg1Expression.ArgumentList.Arguments[0];
+                node = TransformSimpleAssertWithArguments(node, memberAccess, nodeName, arg0, newArg1);
+                node = node.ChangeName("CollectionAssert");
+            }
+            else
+            {
+                Unsupported.Add(new UnsupportedNodeInfo
+                {
+                    Info = "Unsupported EquivalentToConstraint",
+                    Location = node.GetLocation(),
+                    NodeName = node.ToString()
+                });
+            }
+            
+            return node;
+        }
+
+        private InvocationExpressionSyntax TransformStringConstraints(InvocationExpressionSyntax node, MemberAccessExpressionSyntax memberAccess,
+            MemberAccessExpressionSyntax constraintMemberAccess, bool hasNot, out bool hasChanged)
+        {
+            var constraintName = constraintMemberAccess.Name?.ToString();
+            if ("Empty".Equals(constraintName))
+            {
+                node = TransformEmptyStringConstraint(node, memberAccess, hasNot);
+                hasChanged = true;
+                return node;
+            }
+            else if ("Contain".Equals(constraintName))
+            {
+                node = TransformContainStringConstraint(node, memberAccess, hasNot);
+                hasChanged = true;
+                return node;
+            }
+            else if (!hasNot)
+            {
+                if ("EndWith".Equals(constraintName))
+                {
+                    node = TransformGenericStringAssertConstraint(node, memberAccess, "EndsWith");
+                    hasChanged = true;
+                    return node;
+                }
+                else if ("Match".Equals(constraintName))
+                {
+                    node = TransformRegexConstraint(node, memberAccess);
+                    hasChanged = true;
+                    return node;
+                }
+                else if ("StartWith".Equals(constraintName))
+                {
+                    node = TransformGenericStringAssertConstraint(node, memberAccess, "StartsWith");
+                    hasChanged = true;
+                    return node;
+                }
+            }
+
+            hasChanged = false;
+            return node;
+        }
+
+        private InvocationExpressionSyntax TransformContainStringConstraint(InvocationExpressionSyntax node, MemberAccessExpressionSyntax memberAccess, bool hasNot)
+        {
+            var arg0 = node.ArgumentList.Arguments[0];
+            var arg1 = node.ArgumentList.Arguments[1];
+            var type = _semanticModel.GetTypeInfo(arg0.Expression);
+
+            if (type.ConvertedType?.SpecialType != SpecialType.System_String)
+            {
+                Unsupported.Add(new UnsupportedNodeInfo
+                {
+                    Info = "Unsupported arguments in string constraint invocation expression",
+                    Location = node.GetLocation(),
+                    NodeName = node.ToString()
+                });
+                return node;
+            }
+            if (arg1.Expression is InvocationExpressionSyntax invocationExpression)
+            {
+                var stringIsEmpty = SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression,
+                    arg0.Expression, SyntaxFactory.IdentifierName("Contains"));
+
+                var stringArgList = new SeparatedSyntaxList<ArgumentSyntax>();
+                stringArgList = stringArgList.Add(invocationExpression.ArgumentList.Arguments[0]);
+
+                var newArg = SyntaxFactory.Argument(SyntaxFactory.InvocationExpression(stringIsEmpty,
+                    SyntaxFactory.ArgumentList(stringArgList)));
+                var nodeName = hasNot ? "IsFalse" : "IsTrue";
+                node = TransformSimpleAssertWithArguments(node, memberAccess, nodeName, newArg);
+            }
+            else
+            {
+                Unsupported.Add(new UnsupportedNodeInfo
+                {
+                    Info = "Incorrect Does.Contain arguments",
+                    Location = node.GetLocation(),
+                    NodeName = node.ToString()
+                });
+            }
+
+            return node;
+        }
+
+        private InvocationExpressionSyntax TransformEmptyStringConstraint(InvocationExpressionSyntax node, MemberAccessExpressionSyntax memberAccess, bool hasNot)
+        {
+            var arg = node.ArgumentList.Arguments[0];
+            var type = _semanticModel.GetTypeInfo(arg.Expression);
+
+            if (type.ConvertedType?.SpecialType != SpecialType.System_String)
+            {
+                Unsupported.Add(new UnsupportedNodeInfo
+                {
+                    Info = "Unsupported arguments in string constraint invocation expression",
+                    Location = node.GetLocation(),
+                    NodeName = node.ToString()
+                });
+                return node;
+            }
+
+            var stringIsEmpty = SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression,
+                SyntaxFactory.IdentifierName("string"), SyntaxFactory.IdentifierName("IsNullOrEmpty"));
+
+            var stringArgList = new SeparatedSyntaxList<ArgumentSyntax>();
+            stringArgList = stringArgList.Add(arg);
+
+            var newArg = SyntaxFactory.Argument(SyntaxFactory.InvocationExpression(stringIsEmpty,
+                SyntaxFactory.ArgumentList(stringArgList)));
+            var nodeName = hasNot ? "IsFalse" : "IsTrue";
+            node = TransformSimpleAssertWithArguments(node, memberAccess, nodeName, newArg);
+
+            return node;
+        }
+
+        private InvocationExpressionSyntax TransformRegexConstraint(InvocationExpressionSyntax node, MemberAccessExpressionSyntax memberAccess)
+        {
+            var arg0 = node.ArgumentList.Arguments[0];
+            var arg1 = node.ArgumentList.Arguments[1];
+            var arg1Expression = arg1.Expression as InvocationExpressionSyntax;
+
+            var internalArg1 = arg1Expression.ArgumentList.Arguments[0];
+            var matchTypeArgument = SyntaxFactory.Argument(MSTestSyntaxFactory.CreateObjectInstance(typeof(System.Text.RegularExpressions.Regex).FullName,
+                            internalArg1)).NormalizeWhitespace();
+            node = TransformSimpleAssertWithArguments(node, memberAccess, "Matches", arg0, matchTypeArgument);
+            node = node.ChangeName("StringAssert");
+            return node;
+        }
+
+        private InvocationExpressionSyntax TransformGenericStringAssertConstraint(InvocationExpressionSyntax node, MemberAccessExpressionSyntax memberAccess, 
+            string invocationName)
+        {
+            var arg0 = node.ArgumentList.Arguments[0];
+            var arg1 = node.ArgumentList.Arguments[1];
+            var arg1Expression = arg1.Expression as InvocationExpressionSyntax;
+
+            var newArg1 = arg1Expression.ArgumentList.Arguments[0];
+            node = TransformSimpleAssertWithArguments(node, memberAccess, invocationName, arg0, newArg1);
+            node = node.ChangeName("StringAssert");
+            return node;
+        }
+
+
+
+        private InvocationExpressionSyntax TransformTypeOfConstraint(InvocationExpressionSyntax node, MemberAccessExpressionSyntax memberAccess,
+            MemberAccessExpressionSyntax constraintMemberAccess)
+        {
+            var arg0 = node.ArgumentList.Arguments[0];
+            var arg1 = node.ArgumentList.Arguments[1];
+            ArgumentSyntax newArg1 = null;
+            if (constraintMemberAccess.Name is GenericNameSyntax genericNameSyntax)
+            {
+                newArg1 = SyntaxFactory.Argument(SyntaxFactory.TypeOfExpression(genericNameSyntax.TypeArgumentList.Arguments[0]));
+            }
+            else if (arg1.Expression is InvocationExpressionSyntax invocationExpression)
+            {
+                newArg1 = invocationExpression.ArgumentList.Arguments[0];
+            }
+            if(newArg1!= null)
+            {
+                node = TransformSimpleAssertWithArguments(node, memberAccess, "IsInstanceOfType", arg0, newArg1);
+            }
+            else
+            {
+                Unsupported.Add(new UnsupportedNodeInfo
+                {
+                    Info = "Unsupported ExactTypeConstraint",
+                    Location = node.GetLocation(),
+                    NodeName = node.ToString()
+                });
+            }
+            return node;
+        }
+
+        private InvocationExpressionSyntax TransformNaNConstraint(InvocationExpressionSyntax node, MemberAccessExpressionSyntax memberAccess, bool hasNot)
+        {
+            if (node.ArgumentList == null)
+            {
+                Unsupported.Add(new UnsupportedNodeInfo
+                {
+                    Info = "Unsupported invocation expression",
+                    Location = node.GetLocation(),
+                    NodeName = node.ToString()
+                });
+                return node;
+            }
+
+            var arg = node.ArgumentList.Arguments[0];
+
+            var invocationArgList = new SeparatedSyntaxList<ArgumentSyntax>();
+            invocationArgList = invocationArgList.Add(arg);
+
+            var isNanExpression = SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression,
+                SyntaxFactory.IdentifierName("double"), SyntaxFactory.IdentifierName("IsNaN"));
+            var doubleArg = SyntaxFactory.Argument(SyntaxFactory.InvocationExpression(isNanExpression, SyntaxFactory.ArgumentList(invocationArgList)));
+
+            var nodeName = hasNot ? "IsFalse" : "IsTrue";
+            node = TransformSimpleAssertWithArguments(node, memberAccess, nodeName, doubleArg);
+            return node;
+        }
+
         private InvocationExpressionSyntax TransformGreaterLessConstraint(InvocationExpressionSyntax node, 
-            MemberAccessExpressionSyntax memberAccess, MemberAccessExpressionSyntax constraintMemberAccess)
+            MemberAccessExpressionSyntax memberAccess, MemberAccessExpressionSyntax constraintMemberAccess, bool hasNot)
         {
             SyntaxKind compareOperator;
             switch (constraintMemberAccess.Name?.ToString())
@@ -794,7 +1390,7 @@ namespace NUnitMigrator.Core.Rewriter
 
             if (node.ArgumentList == null || node.ArgumentList.Arguments.Count < 2)
             {
-                Errors.Add(new RewriterError
+                Unsupported.Add(new UnsupportedNodeInfo
                 {
                     Info = "Unsupported invocation expression",
                     Location = node.GetLocation(),
@@ -807,36 +1403,53 @@ namespace NUnitMigrator.Core.Rewriter
             var arg1 = node.ArgumentList.Arguments[1];
             var arg1Expression = arg1.Expression as InvocationExpressionSyntax;
 
-            node = TransformComparisonExpression(node, memberAccess, compareOperator,
-              arg0, arg1Expression.ArgumentList.Arguments[0].Expression, 2);
+            node = MSTestSyntaxFactory.CreateComparisonExpression(node, memberAccess, compareOperator,
+              arg0, arg1Expression.ArgumentList.Arguments[0].Expression, 2, !hasNot);
 
             return node;
         }
 
         private InvocationExpressionSyntax TransformEqualToConstraint(InvocationExpressionSyntax node, 
-            MemberAccessExpressionSyntax memberAccess, bool areNotEqual)
+            MemberAccessExpressionSyntax memberAccess, bool hasNot)
         {
             var arg0 = node.ArgumentList.Arguments[0];
             var arg1 = node.ArgumentList.Arguments[1];
-            var arg1Expression = arg1.Expression as InvocationExpressionSyntax;
+            if (arg1.Expression is InvocationExpressionSyntax arg1Expression)
+            {
+                var nodeName = hasNot ? "AreNotEqual" : "AreEqual";
+                var newArg1 = arg1Expression.ArgumentList.Arguments[0];
+                node = TransformSimpleAssertWithArguments(node, memberAccess, nodeName, arg0, newArg1);
+                //node = node.ChangeName("CollectionAssert");
+            }
+            else
+            {
+                Unsupported.Add(new UnsupportedNodeInfo
+                {
+                    Info = "Unsupported EqualToConstraint",
+                    Location = node.GetLocation(),
+                    NodeName = node.ToString()
+                });
+            }
+            return node;
+        }
 
+        private InvocationExpressionSyntax TransformSimpleAssertWithArguments(InvocationExpressionSyntax node, 
+            MemberAccessExpressionSyntax memberAccess, string nodeName, params ArgumentSyntax[] arguments)
+        {
             var argList = new SeparatedSyntaxList<ArgumentSyntax>();
-            argList = argList.Add(arg0);
-            argList = argList.Add(arg1Expression.ArgumentList.Arguments[0]);
-
+            argList = argList.AddRange(arguments);
 
             var remainingArguments = node.ArgumentList.Arguments.Skip(2);
             if (remainingArguments.Any())
                 argList = argList.AddRange(remainingArguments);
 
-            memberAccess = areNotEqual ? memberAccess.WithName(SyntaxFactory.IdentifierName("AreNotEqual"))
-                : memberAccess.WithName(SyntaxFactory.IdentifierName("AreEqual"));
+            memberAccess = memberAccess.WithName(SyntaxFactory.IdentifierName(nodeName));
             node = node.WithExpression(memberAccess).WithArgumentList(
                 SyntaxFactory.ArgumentList(argList).NormalizeWhitespace());
             return node;
         }
 
-        private InvocationExpressionSyntax TransformSimpleConstraint(InvocationExpressionSyntax node, 
+        private InvocationExpressionSyntax TransformSimpleConstraint(InvocationExpressionSyntax node,
             MemberAccessExpressionSyntax memberAccess, string nodeName)
         {
             var arg = node.ArgumentList.Arguments[0];
@@ -858,7 +1471,7 @@ namespace NUnitMigrator.Core.Rewriter
         {
             if (node.ArgumentList == null)
             {
-                Errors.Add(new RewriterError
+                Unsupported.Add(new UnsupportedNodeInfo
                 {
                     Info = "Unsupported FileAssert expression",
                     Location = node.GetLocation(),
@@ -884,7 +1497,7 @@ namespace NUnitMigrator.Core.Rewriter
             }
             if (directoryExists is null)
             {
-                Errors.Add(new RewriterError
+                Unsupported.Add(new UnsupportedNodeInfo
                 {
                     Info = "Unsupported arguments in FileAssert expression",
                     Location = node.GetLocation(),
@@ -919,7 +1532,7 @@ namespace NUnitMigrator.Core.Rewriter
         {
             if (node.ArgumentList == null)
             {
-                Errors.Add(new RewriterError
+                Unsupported.Add(new UnsupportedNodeInfo
                 {
                     Info = "Unsupported DirectoryAssert expression",
                     Location = node.GetLocation(),
@@ -945,7 +1558,7 @@ namespace NUnitMigrator.Core.Rewriter
             }
             if (directoryExists is null)
             {
-                Errors.Add(new RewriterError
+                Unsupported.Add(new UnsupportedNodeInfo
                 {
                     Info = "Unsupported arguments in DirectoryAssert expression",
                     Location = node.GetLocation(),
@@ -979,7 +1592,7 @@ namespace NUnitMigrator.Core.Rewriter
         {
             if (node.ArgumentList == null)
             {
-                Errors.Add(new RewriterError
+                Unsupported.Add(new UnsupportedNodeInfo
                 {
                     Info = "Unsupported invocation expression",
                     Location = node.GetLocation(),
@@ -989,25 +1602,27 @@ namespace NUnitMigrator.Core.Rewriter
             }
 
             var arg = node.ArgumentList.Arguments[0];
-            var type = _semanticModel.GetTypeInfo(arg.Expression);
+            //var type = _semanticModel.GetTypeInfo(arg.Expression);
 
-            if (type.ConvertedType?.SpecialType != SpecialType.System_Double)
-            {
-                Errors.Add(new RewriterError
-                {
-                    Info = "Unsupported arguments in invocation expression",
-                    Location = node.GetLocation(),
-                    NodeName = node.ToString()
-                });
-                return node;
-            }
+            //if (type.ConvertedType?.SpecialType != SpecialType.System_Double)
+            //{
+            //    Unsupported.Add(new UnsupportedNodeInfo
+            //    {
+            //        Info = "Unsupported arguments in invocation expression",
+            //        Location = node.GetLocation(),
+            //        NodeName = node.ToString()
+            //    });
+            //    return node;
+            //}
 
             var argList = new SeparatedSyntaxList<ArgumentSyntax>();
+            var invocationArgList = new SeparatedSyntaxList<ArgumentSyntax>();
+            invocationArgList = invocationArgList.Add(arg);
 
-            var isNanExpression = SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression, 
+            var isNanExpression = SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression,
                 SyntaxFactory.IdentifierName("double"), SyntaxFactory.IdentifierName("IsNaN"));
 
-            argList = argList.Add(SyntaxFactory.Argument(SyntaxFactory.InvocationExpression(isNanExpression, node.ArgumentList)));
+            argList = argList.Add(SyntaxFactory.Argument(SyntaxFactory.InvocationExpression(isNanExpression, SyntaxFactory.ArgumentList(invocationArgList))));
 
             var remainingArguments = node.ArgumentList.Arguments.Skip(1);
             if (remainingArguments.Any())
@@ -1025,7 +1640,7 @@ namespace NUnitMigrator.Core.Rewriter
         {
             if (node.ArgumentList == null)
             {
-                Errors.Add(new RewriterError
+                Unsupported.Add(new UnsupportedNodeInfo
                 {
                     Info = "Unsupported invocation expression",
                     Location = node.GetLocation(),
@@ -1038,7 +1653,7 @@ namespace NUnitMigrator.Core.Rewriter
 
             if (type.ConvertedType?.SpecialType != SpecialType.System_String)
             {
-                Errors.Add(new RewriterError
+                Unsupported.Add(new UnsupportedNodeInfo
                 {
                     Info = "Unsupported arguments in invocation expression",
                     Location = node.GetLocation(),
@@ -1050,8 +1665,10 @@ namespace NUnitMigrator.Core.Rewriter
 
             var stringIsEmpty = SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression,
                 SyntaxFactory.IdentifierName("string"), SyntaxFactory.IdentifierName("IsNullOrEmpty"));
-
-            argList = argList.Add(SyntaxFactory.Argument(SyntaxFactory.InvocationExpression(stringIsEmpty, node.ArgumentList)));
+            var stringArgList = new SeparatedSyntaxList<ArgumentSyntax>();
+            stringArgList = stringArgList.Add(arg);
+            argList = argList.Add(SyntaxFactory.Argument(SyntaxFactory.InvocationExpression(stringIsEmpty,
+                SyntaxFactory.ArgumentList(stringArgList))));
 
             var remainingArguments = node.ArgumentList.Arguments.Skip(1);
             if (remainingArguments.Any())
@@ -1069,7 +1686,7 @@ namespace NUnitMigrator.Core.Rewriter
         {
             if (node.ArgumentList == null || node.ArgumentList.Arguments.Count < 1)
             {
-                Errors.Add(new RewriterError
+                Unsupported.Add(new UnsupportedNodeInfo
                 {
                     Info = "Unsupported invocation expression",
                     Location = node.GetLocation(),
@@ -1139,7 +1756,7 @@ namespace NUnitMigrator.Core.Rewriter
 
             if (node.ArgumentList == null || node.ArgumentList.Arguments.Count < 2)
             {
-                Errors.Add(new RewriterError
+                Unsupported.Add(new UnsupportedNodeInfo
                 {
                     Info = "Unsupported invocation expression",
                     Location = node.GetLocation(),
@@ -1150,29 +1767,12 @@ namespace NUnitMigrator.Core.Rewriter
             var arg0 = node.ArgumentList.Arguments[0].Expression;
             var arg1 = node.ArgumentList.Arguments[1].Expression;
 
-            node = TransformComparisonExpression(node, memberAccess, compareOperator,
+            node = MSTestSyntaxFactory.CreateComparisonExpression(node, memberAccess, compareOperator,
               arg0, arg1, 2);
 
             return node;
         }
 
-        //does not look good
-        private InvocationExpressionSyntax TransformComparisonExpression(InvocationExpressionSyntax node, 
-            MemberAccessExpressionSyntax memberAccess, SyntaxKind compareOperator, 
-            ExpressionSyntax arg0, ExpressionSyntax arg1, int initialArgAmount)
-        {
-            var argList = new SeparatedSyntaxList<ArgumentSyntax>();
-            var binaryExpression = SyntaxFactory.BinaryExpression(compareOperator, arg0, arg1);
-            argList = argList.Add(SyntaxFactory.Argument(binaryExpression).NormalizeWhitespace());
-            var remainingArguments = node.ArgumentList.Arguments.Skip(initialArgAmount);
-            if (remainingArguments.Any())
-            {
-                argList = argList.AddRange(remainingArguments);
-            }
-            memberAccess = memberAccess.WithName(SyntaxFactory.IdentifierName("IsTrue"));
-            node = node.WithExpression(memberAccess).WithArgumentList(
-                SyntaxFactory.ArgumentList(argList).NormalizeWhitespace());
-            return node;
-        }
+        
     }
 }

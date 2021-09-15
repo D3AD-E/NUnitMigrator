@@ -11,17 +11,14 @@ namespace NUnitMigrator.Core.Rewriter
     public class ClassState : IClearable
     {
         public readonly List<AttributeSyntax> RemovedAttributes;
-        public bool IsClassAtrributeNeeded;
         public ClassState()
         {
             RemovedAttributes = new List<AttributeSyntax>();
-            IsClassAtrributeNeeded = true;
         }
 
         public void Clear()
         {
             RemovedAttributes.Clear();
-            IsClassAtrributeNeeded = true;
         }
     }
 }

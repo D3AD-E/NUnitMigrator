@@ -23,7 +23,6 @@ public class A
 }";
             const string expected = @"
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-[TestClass]
 public class A
 { 
     void Test()
@@ -54,7 +53,6 @@ public class A
 }";
             const string expected = @"
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-[TestClass]
 public class A
 { 
     void Test()
@@ -85,7 +83,6 @@ public class A
 }";
             const string expected = @"
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-[TestClass]
 public class A
 { 
     int B() { return 1; }
@@ -118,7 +115,6 @@ public class A
 }";
             const string expected = @"
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-[TestClass]
 public class A
 { 
     int B() { return 1; }
@@ -151,7 +147,6 @@ public class A
 }";
             const string expected = @"
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-[TestClass]
 public class A
 { 
     int B() { return 1; }
@@ -184,7 +179,6 @@ public class A
 }";
             const string expected = @"
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-[TestClass]
 public class A
 { 
     int B() { return 1; }
@@ -215,7 +209,6 @@ public class A
 }";
             const string expected = @"
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-[TestClass]
 public class A
 { 
     void Test()
@@ -244,7 +237,6 @@ public class A
 }";
             const string expected = @"
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-[TestClass]
 public class A
 { 
     void Test()
@@ -268,19 +260,18 @@ public class A
     int B() { return 1; }
     void Test()
     {
-        Assert.Zero(1);
+        Assert.Zero(0);
         Assert.Zero(B());
     }
 }";
             const string expected = @"
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-[TestClass]
 public class A
 { 
     int B() { return 1; }
     void Test()
     {
-        Assert.IsTrue(1 == 0);
+        Assert.IsTrue(0 == 0);
         Assert.IsTrue(B() == 0);
     }
 }";
@@ -305,7 +296,6 @@ public class A
 }";
             const string expected = @"
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-[TestClass]
 public class A
 { 
     int B() { return 1; }
@@ -336,7 +326,6 @@ public class A
 }";
             const string expected = @"
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-[TestClass]
 public class A
 { 
     int B() { return 1; }
@@ -367,7 +356,6 @@ public class A
 }";
             const string expected = @"
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-[TestClass]
 public class A
 { 
     int B() { return 1; }
@@ -397,7 +385,6 @@ public class A
 }";
             const string expected = @"
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-[TestClass]
 public class A
 { 
     void Test()
@@ -426,7 +413,6 @@ public class A
 }";
             const string expected = @"
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-[TestClass]
 public class A
 { 
     void Test()
@@ -457,7 +443,6 @@ public class A
             const string expected = @"
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Collections.Generic;
-[TestClass]
 public class A
 { 
     void Test()

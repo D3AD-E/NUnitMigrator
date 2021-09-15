@@ -33,7 +33,6 @@ public class A
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 [Serializable]
-[TestClass]
 public class A
 {
     [TestInitialize]
@@ -68,7 +67,6 @@ public class A
 
             const string expected = @"
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-[TestClass]
 public class A
 {
     [Owner(""Name"")]
@@ -99,7 +97,6 @@ public class A
 
             const string expected = @"
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-[TestClass]
 public class A
 {
     //""Email""
@@ -132,7 +129,6 @@ public class A
 
             const string expected = @"
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-[TestClass]
 public class A
 {
     public void Test()
@@ -152,7 +148,6 @@ public class A
         {
             const string input = @"
 using NUnit.Framework;
-[Author(""Name"")]
 public class A
 {
     [Author(""Name"")]
@@ -166,7 +161,6 @@ public class A
 
             const string expected = @"
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-[TestClass]
 public class A
 {
     [Owner(""Name"")]
@@ -199,7 +193,6 @@ public class A
 
             const string expected = @"
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-[TestClass]
 public class A
 {
     public void Test()
@@ -230,7 +223,6 @@ public class A
 
             const string expected = @"
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-[TestClass]
 public class A
 {
     public void Test()
@@ -262,7 +254,6 @@ public class A
 
             const string expected = @"
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-[TestClass]
 public class A
 {
     [ClassInitialize]
@@ -304,7 +295,7 @@ using NUnit.Framework;
 [TestFixture]
 public class A
 { 
-    [TestCase(1, 2, 3)]
+    [TestCase(1,2,3)]
     void Test(int a, int b, int c) 
     {
 
@@ -315,8 +306,39 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 [TestClass]
 public class A
 { 
-    [DataRow(1, 2, 3)]
+    [DataRow(1,2,3)]
     [TestMethod]
+    void Test(int a, int b, int c) 
+    {
+
+    }
+}";
+            var actual = TestSupport.RunTest(input);
+            Assert.AreEqual(expected, actual.Text);
+            Assert.IsTrue(actual.Errors.Count == 0);
+        }
+
+        [TestMethod]
+        public void TestCaseComplicated()
+        {
+            const string input = @"
+using NUnit.Framework;
+[TestFixture]
+public class A
+{ 
+    [TestCase(1, 2, TestOf = typeof(string))]
+    void Test(int a, int b, int c) 
+    {
+
+    }
+}";
+            const string expected = @"
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+[TestClass]
+public class A
+{ 
+    [DataRow(1,2)]
+    [TestMethod,Description(""typeof(string)"")]
     void Test(int a, int b, int c) 
     {
 

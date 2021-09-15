@@ -9,8 +9,6 @@ namespace NUnitMigrator.Core.Rewriter
 {
     public class RewriterStates
     {
-        
-        
         public interface IClearable
         {
             void Clear();
@@ -18,11 +16,15 @@ namespace NUnitMigrator.Core.Rewriter
 
         public class UiCultureExpressionsState : IClearable
         {
-            public string Expression;
-            public bool IsExpressionNeeded = false;
-            public string UIExpression;
-            public bool IsUIExpressionNeeded = false;
+            public string Expression { get; set; }
+            public bool IsExpressionNeeded { get; set; }
+            public string UIExpression { get; set; }
+            public bool IsUIExpressionNeeded { get; set; }
 
+            public UiCultureExpressionsState()
+            {
+                Clear();
+            }
             public void Clear()
             {
                 Expression = string.Empty;
@@ -34,9 +36,13 @@ namespace NUnitMigrator.Core.Rewriter
 
         public class AuthorState : IClearable
         {
-            public string Email;
-            public bool IsEmailNeeded = false;
+            public string Email { get; set; }
+            public bool IsEmailNeeded { get; set; }
 
+            public AuthorState()
+            {
+                Clear();
+            }
             public void Clear()
             {
                 Email = string.Empty;
@@ -46,8 +52,8 @@ namespace NUnitMigrator.Core.Rewriter
 
         public class ValuesRangeState : IClearable
         {
-            public List<AttributeSyntax> Attributes;
-            public bool IsPropertyNeeded = false;
+            public readonly List<AttributeSyntax> Attributes;
+            public bool IsPropertyNeeded { get; set; }
 
             public void Clear()
             {
@@ -58,6 +64,7 @@ namespace NUnitMigrator.Core.Rewriter
             public ValuesRangeState()
             {
                 Attributes = new List<AttributeSyntax>();
+                IsPropertyNeeded = false;
             }
         }
     }

@@ -12,7 +12,6 @@ namespace NUnitMigrator.Core.Rewriter
 {
     static class RewriterExtentions
     {
-
         public static ClassDeclarationSyntax AddAttributeWithName(this ClassDeclarationSyntax node, string attributeName)
         {
             var existing = node.AttributeLists;
@@ -84,6 +83,19 @@ namespace NUnitMigrator.Core.Rewriter
                 var newLists = new SyntaxList<AttributeListSyntax>();
                 newLists = newLists.Add(newList);
                 node = node.WithAttributeLists(newLists);
+            }
+            return node;
+        }
+
+        public static InvocationExpressionSyntax ChangeName(this InvocationExpressionSyntax node, string name)
+        {
+            if(node.Expression is MemberAccessExpressionSyntax memberAccess)
+            {
+                var trivia = memberAccess.GetLeadingTrivia();
+
+                memberAccess = memberAccess.WithExpression(SyntaxFactory.IdentifierName(name))
+                    .WithLeadingTrivia(trivia);
+                node = node.WithExpression(memberAccess);
             }
             return node;
         }
@@ -309,6 +321,18 @@ namespace NUnitMigrator.Core.Rewriter
             return typeSymbol.Construct(typeArgumentsTypeInfos.ToArray<ITypeSymbol>());
         }
 
+        public static ExpressionSyntax GetExpression(this SyntaxNode node)
+        {
+            if (node is MemberAccessExpressionSyntax memberAccess)
+                return memberAccess.Expression;
+            if (node is InvocationExpressionSyntax invocation)
+                return invocation.Expression;
+            if (node is ArgumentSyntax argument)
+                return argument.Expression;
+
+            return null;
+        }
+
         public static bool HasBooleanResult(this SemanticModel semanticModel, ExpressionSyntax expression)
         {
             if (expression != null)
@@ -333,5 +357,65 @@ namespace NUnitMigrator.Core.Rewriter
                         .Select(y => x.GetDeclaredSymbol(y)))
                 .FirstOrDefault(x => predicate(x));
         }
+
+        public static ArgumentListSyntax GetParentInvocationArguments(
+            this MemberAccessExpressionSyntax memberAccess,
+            ExceptionSyntaxData details, int numArgumentsRequired,
+            Func<ArgumentSyntax, int, bool> check = null)
+        {
+            if (details == null)
+                throw new ArgumentNullException(nameof(details));
+
+            if (memberAccess?.Parent is InvocationExpressionSyntax invocation &&
+                invocation.ArgumentList?.Arguments.Count == numArgumentsRequired)
+            {
+                for (int i = 0; i < invocation.ArgumentList.Arguments.Count; i++)
+                {
+                    if (check != null && !check(invocation.ArgumentList.Arguments[i], i))
+                    {
+                        details.Supported = false;
+                        return null;
+                    }
+                }
+
+                return invocation.ArgumentList;
+            }
+
+            details.Supported = false;
+            return null;
+        }
+
+        public static ArgumentListSyntax TransformParentInvocationArguments(
+            this MemberAccessExpressionSyntax memberAccess,
+            ExceptionSyntaxData details, int numArgumentsRequired,
+            Func<ArgumentSyntax, int, ArgumentSyntax> transform)
+        {
+            if (details == null)
+                throw new ArgumentNullException(nameof(details));
+            if (transform == null)
+                throw new ArgumentNullException(nameof(transform));
+
+            if (memberAccess?.Parent is InvocationExpressionSyntax invocation &&
+                invocation.ArgumentList?.Arguments.Count == numArgumentsRequired)
+            {
+                var result = new SeparatedSyntaxList<ArgumentSyntax>();
+                for (int i = 0; i < invocation.ArgumentList.Arguments.Count; i++)
+                {
+                    var transformed = transform(invocation.ArgumentList.Arguments[i], i);
+                    if (transformed == null)
+                    {
+                        details.Supported = false;
+                        return null;
+                    }
+                    result = result.Add(transformed);
+                }
+                return SyntaxFactory.ArgumentList(result);
+            }
+
+            details.Supported = false;
+            return null;
+        }
+
+        
     }
 }
