@@ -1,7 +1,7 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Text;
-using NUnitMigrator.Core.Rewriter;
+using NUnitMigrator.Core.RewriterLogic;
 using System;
 using System.Collections.Generic;
 using System.Linq;

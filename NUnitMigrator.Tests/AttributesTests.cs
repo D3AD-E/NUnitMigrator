@@ -1,5 +1,5 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using NUnitMigrator.Core.Rewriter;
+using NUnitMigrator.Core.RewriterLogic;
 using System;
 using System.Collections.Generic;
 
@@ -307,7 +307,6 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 public class A
 { 
     [DataRow(1,2,3)]
-    [TestMethod]
     void Test(int a, int b, int c) 
     {
 
@@ -338,7 +337,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 public class A
 { 
     [DataRow(1,2)]
-    [TestMethod,Description(""typeof(string)"")]
+    [Description(""typeof(string)"")]
     void Test(int a, int b, int c) 
     {
 

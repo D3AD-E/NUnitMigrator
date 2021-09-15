@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace NUnitMigrator.Core.Rewriter
+namespace NUnitMigrator.Core.RewriterLogic
 {
     public class UnsupportedNodeInfo
     {
@@ -14,5 +14,10 @@ namespace NUnitMigrator.Core.Rewriter
         public Location Location;
 
         public string NodeName;
+
+        public override string ToString()
+        {
+            return $"{Info} at [{Location.SourceSpan.Start}...{Location.SourceSpan.End}] for {NodeName}";
+        }
     }
 }

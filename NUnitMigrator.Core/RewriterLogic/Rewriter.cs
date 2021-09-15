@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace NUnitMigrator.Core.Rewriter
+namespace NUnitMigrator.Core.RewriterLogic
 {
     public class Rewriter : CSharpSyntaxRewriter
     {
@@ -22,7 +22,6 @@ namespace NUnitMigrator.Core.Rewriter
             _classState = new ClassState();
             Unsupported = new List<UnsupportedNodeInfo>();
         }
-
 
         public override SyntaxNode VisitClassDeclaration(ClassDeclarationSyntax node)
         {
@@ -211,7 +210,6 @@ namespace NUnitMigrator.Core.Rewriter
         private AttributeSyntax TransformTestCaseAttribute(AttributeSyntax attribute)
         {
             attribute = attribute.WithName(SyntaxFactory.IdentifierName(RewriterData.MSTestData.DATA_ROW_ATTRIBUTE));
-            _methodState.AddedAttributes.Add(SyntaxFactory.Attribute(SyntaxFactory.ParseName(RewriterData.MSTestData.TEST_METHOD_ATTRIBUTE)));
             var savedArguments = new SeparatedSyntaxList<AttributeArgumentSyntax>();
             foreach (var argument in attribute.ArgumentList.Arguments)
             {
@@ -245,6 +243,8 @@ namespace NUnitMigrator.Core.Rewriter
                     case "TestOf":
                         _methodState.AddedAttributes.Add(MSTestSyntaxFactory.CreateAttribute("Description", 
                             SyntaxFactory.ParseExpression("\"" + argument.Expression + "\"")));
+                        break;
+                    case "ExpectedResult":
                         break;
                     default:
                         savedArguments = savedArguments.Add(argument);
@@ -970,6 +970,10 @@ namespace NUnitMigrator.Core.Rewriter
             {
                 node = TransformContainsValueConstraint(node, memberAccess, hasNot);
             }
+            else if ("Contain".Equals(constraintName))
+            {
+                node = TransformContainConstraint(node, memberAccess, hasNot);
+            }
             return node;
         }
 
@@ -1178,7 +1182,7 @@ namespace NUnitMigrator.Core.Rewriter
             }
             else if ("Contain".Equals(constraintName))
             {
-                node = TransformContainStringConstraint(node, memberAccess, hasNot);
+                node = TransformContainConstraint(node, memberAccess, hasNot);
                 hasChanged = true;
                 return node;
             }
@@ -1208,22 +1212,11 @@ namespace NUnitMigrator.Core.Rewriter
             return node;
         }
 
-        private InvocationExpressionSyntax TransformContainStringConstraint(InvocationExpressionSyntax node, MemberAccessExpressionSyntax memberAccess, bool hasNot)
+        private InvocationExpressionSyntax TransformContainConstraint(InvocationExpressionSyntax node, MemberAccessExpressionSyntax memberAccess, bool hasNot)
         {
             var arg0 = node.ArgumentList.Arguments[0];
             var arg1 = node.ArgumentList.Arguments[1];
-            var type = _semanticModel.GetTypeInfo(arg0.Expression);
 
-            if (type.ConvertedType?.SpecialType != SpecialType.System_String)
-            {
-                Unsupported.Add(new UnsupportedNodeInfo
-                {
-                    Info = "Unsupported arguments in string constraint invocation expression",
-                    Location = node.GetLocation(),
-                    NodeName = node.ToString()
-                });
-                return node;
-            }
             if (arg1.Expression is InvocationExpressionSyntax invocationExpression)
             {
                 var stringIsEmpty = SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression,
@@ -1772,7 +1765,5 @@ namespace NUnitMigrator.Core.Rewriter
 
             return node;
         }
-
-        
     }
 }

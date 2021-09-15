@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace NUnitMigrator.Core.Rewriter
+namespace NUnitMigrator.Core.RewriterLogic
 {
     public class RewriterStates
     {

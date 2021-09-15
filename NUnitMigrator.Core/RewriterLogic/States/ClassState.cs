@@ -4,9 +4,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using static NUnitMigrator.Core.Rewriter.RewriterStates;
+using static NUnitMigrator.Core.RewriterLogic.RewriterStates;
 
-namespace NUnitMigrator.Core.Rewriter
+namespace NUnitMigrator.Core.RewriterLogic
 {
     public class ClassState : IClearable
     {

@@ -1,7 +1,7 @@
 ﻿using Microsoft.CodeAnalysis.CSharp.Syntax;
-using static NUnitMigrator.Core.Rewriter.RewriterStates;
+using static NUnitMigrator.Core.RewriterLogic.RewriterStates;
 
-namespace NUnitMigrator.Core.Rewriter
+namespace NUnitMigrator.Core.RewriterLogic
 {
     public class ExceptionSyntaxData : IClearable
     {

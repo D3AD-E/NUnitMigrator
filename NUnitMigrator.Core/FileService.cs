@@ -10,13 +10,15 @@ namespace NUnitMigrator.Core
 {
     internal static class FileService
     {
-        static public async Task<Solution> OpenSolutionAsync(string path)
+        public static async Task<Tuple<Solution, MSBuildWorkspace>> OpenSolutionAsync(string path)
         {
+
             var workspace = MSBuildWorkspace.Create();
 
             var sln = await workspace.OpenSolutionAsync(path);
 
-            return sln;
+            return new Tuple<Solution, MSBuildWorkspace>(sln, workspace);
         }
+
     }
 }

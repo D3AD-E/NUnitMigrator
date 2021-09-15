@@ -6,9 +6,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using static NUnitMigrator.Core.Rewriter.ExceptionSyntaxData;
+using static NUnitMigrator.Core.RewriterLogic.ExceptionSyntaxData;
 
-namespace NUnitMigrator.Core.Rewriter
+namespace NUnitMigrator.Core.RewriterLogic
 {
     internal class MSTestSyntaxFactory
     {
