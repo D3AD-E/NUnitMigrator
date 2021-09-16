@@ -213,8 +213,8 @@ public class A
 { 
     void Test()
     {
-        Assert.That(""Hello"", Does.Contain(""He"");
-        Assert.That(""Hello"", Does.Not.Contain(""He"");
+        Assert.That(""Hello"", Does.Contain(""He""));
+        Assert.That(""Hello"", Does.Not.Contain(""He""));
     }
 }";
             const string expected = @"

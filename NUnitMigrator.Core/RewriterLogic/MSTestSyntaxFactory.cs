@@ -199,5 +199,22 @@ namespace NUnitMigrator.Core.RewriterLogic
                 SyntaxFactory.ArgumentList(argList).NormalizeWhitespace());
             return node;
         }
+        public static InvocationExpressionSyntax CreateInvocation(ExpressionSyntax expression, string name, params ArgumentSyntax[] arguments)
+        {
+            var memberAccess = SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression,
+                expression, SyntaxFactory.IdentifierName(name));
+
+            var argList = new SeparatedSyntaxList<ArgumentSyntax>();
+            argList = argList.AddRange(arguments);
+
+            var invocation = SyntaxFactory.InvocationExpression(memberAccess,
+                SyntaxFactory.ArgumentList(argList));
+            return invocation;
+        }
+
+        public static InvocationExpressionSyntax CreateInvocation(string expression, string name, params ArgumentSyntax[] arguments)
+        {
+            return CreateInvocation(SyntaxFactory.IdentifierName(expression), name, arguments);
+        }
     }
 }

@@ -899,14 +899,8 @@ namespace NUnitMigrator.Core.RewriterLogic
 
             if (arg1.Expression is InvocationExpressionSyntax invocationExpression)
             {
-                var containsKey = SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression,
-                    arg0.Expression, SyntaxFactory.IdentifierName("ContainsValue"));
-
-                var argList = new SeparatedSyntaxList<ArgumentSyntax>();
-                argList = argList.Add(invocationExpression.ArgumentList.Arguments[0]);
-
-                var newArg = SyntaxFactory.Argument(SyntaxFactory.InvocationExpression(containsKey,
-                    SyntaxFactory.ArgumentList(argList)));
+                var invocation = MSTestSyntaxFactory.CreateInvocation(arg0.Expression, "ContainsValue", invocationExpression.ArgumentList.Arguments[0]);
+                var newArg = SyntaxFactory.Argument(invocation);
                 var nodeName = hasNot ? "IsFalse" : "IsTrue";
                 node = TransformSimpleAssertWithArguments(node, memberAccess, nodeName, newArg);
             }
@@ -930,14 +924,8 @@ namespace NUnitMigrator.Core.RewriterLogic
 
             if (arg1.Expression is InvocationExpressionSyntax invocationExpression)
             {
-                var containsKey = SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression,
-                    arg0.Expression, SyntaxFactory.IdentifierName("ContainsKey"));
-
-                var argList = new SeparatedSyntaxList<ArgumentSyntax>();
-                argList = argList.Add(invocationExpression.ArgumentList.Arguments[0]);
-
-                var newArg = SyntaxFactory.Argument(SyntaxFactory.InvocationExpression(containsKey,
-                    SyntaxFactory.ArgumentList(argList)));
+                var invocation = MSTestSyntaxFactory.CreateInvocation(arg0.Expression, "ContainsKey", invocationExpression.ArgumentList.Arguments[0]);
+                var newArg = SyntaxFactory.Argument(invocation);
                 var nodeName = hasNot ? "IsFalse" : "IsTrue";
                 node = TransformSimpleAssertWithArguments(node, memberAccess, nodeName, newArg);
             }
@@ -1009,24 +997,9 @@ namespace NUnitMigrator.Core.RewriterLogic
                 });
                 return node;
             }
-
-            var argList = new SeparatedSyntaxList<ArgumentSyntax>();
-            argList = argList.Add(SyntaxFactory.Argument(directoryExists));
-
-            var remainingArguments = node.ArgumentList.Arguments.Skip(2);
-            if (remainingArguments.Any())
-                argList = argList.AddRange(remainingArguments);
-
-            var trivia = memberAccess.GetLeadingTrivia();
-
-            memberAccess = hasNot ?
-                memberAccess.WithName(SyntaxFactory.IdentifierName("IsFalse")) :
-                memberAccess.WithName(SyntaxFactory.IdentifierName("IsTrue"));
-
-            memberAccess = memberAccess.WithExpression(SyntaxFactory.IdentifierName("Assert"))
-                .WithLeadingTrivia(trivia);
-            node = node.WithExpression(memberAccess).WithArgumentList(
-                SyntaxFactory.ArgumentList(argList).NormalizeWhitespace());
+            var nodeName = hasNot ? "IsFalse" : "IsTrue";
+            node = TransformSimpleAssertWithArguments(node, memberAccess, nodeName, SyntaxFactory.Argument(directoryExists));
+            node = node.ChangeName("Assert");
 
             return node;
         }
@@ -1110,6 +1083,7 @@ namespace NUnitMigrator.Core.RewriterLogic
         private InvocationExpressionSyntax TransformCollectionAmountConstraint(InvocationExpressionSyntax node, 
             MemberAccessExpressionSyntax memberAccess, bool hasNot, string amount)
         {
+
             var arg0 = node.ArgumentList.Arguments[0];
            
             var argCountExpression = SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression,
@@ -1219,14 +1193,8 @@ namespace NUnitMigrator.Core.RewriterLogic
 
             if (arg1.Expression is InvocationExpressionSyntax invocationExpression)
             {
-                var stringIsEmpty = SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression,
-                    arg0.Expression, SyntaxFactory.IdentifierName("Contains"));
-
-                var stringArgList = new SeparatedSyntaxList<ArgumentSyntax>();
-                stringArgList = stringArgList.Add(invocationExpression.ArgumentList.Arguments[0]);
-
-                var newArg = SyntaxFactory.Argument(SyntaxFactory.InvocationExpression(stringIsEmpty,
-                    SyntaxFactory.ArgumentList(stringArgList)));
+                var invocation = MSTestSyntaxFactory.CreateInvocation(arg0.Expression, "Contains", invocationExpression.ArgumentList.Arguments[0]);
+                var newArg = SyntaxFactory.Argument(invocation);
                 var nodeName = hasNot ? "IsFalse" : "IsTrue";
                 node = TransformSimpleAssertWithArguments(node, memberAccess, nodeName, newArg);
             }
@@ -1246,30 +1214,11 @@ namespace NUnitMigrator.Core.RewriterLogic
         private InvocationExpressionSyntax TransformEmptyStringConstraint(InvocationExpressionSyntax node, MemberAccessExpressionSyntax memberAccess, bool hasNot)
         {
             var arg = node.ArgumentList.Arguments[0];
-            var type = _semanticModel.GetTypeInfo(arg.Expression);
+            var invocation = MSTestSyntaxFactory.CreateInvocation("string", "IsNullOrEmpty", arg);
 
-            if (type.ConvertedType?.SpecialType != SpecialType.System_String)
-            {
-                Unsupported.Add(new UnsupportedNodeInfo
-                {
-                    Info = "Unsupported arguments in string constraint invocation expression",
-                    Location = node.GetLocation(),
-                    NodeName = node.ToString()
-                });
-                return node;
-            }
-
-            var stringIsEmpty = SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression,
-                SyntaxFactory.IdentifierName("string"), SyntaxFactory.IdentifierName("IsNullOrEmpty"));
-
-            var stringArgList = new SeparatedSyntaxList<ArgumentSyntax>();
-            stringArgList = stringArgList.Add(arg);
-
-            var newArg = SyntaxFactory.Argument(SyntaxFactory.InvocationExpression(stringIsEmpty,
-                SyntaxFactory.ArgumentList(stringArgList)));
+            var newArg = SyntaxFactory.Argument(invocation);
             var nodeName = hasNot ? "IsFalse" : "IsTrue";
             node = TransformSimpleAssertWithArguments(node, memberAccess, nodeName, newArg);
-
             return node;
         }
 
