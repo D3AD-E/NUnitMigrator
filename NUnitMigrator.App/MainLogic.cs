@@ -10,14 +10,14 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace NUnitMigrator.Core
+namespace NUnitMigrator.App.Logic
 {
-    internal static class MainLogic
+    internal class MainLogic
     {
         public static async void Migrate(string path)
         {
             var visualStudioInstances = MSBuildLocator.QueryVisualStudioInstances().ToArray();
-            var instance = visualStudioInstances.Length == 1 ? visualStudioInstances[0] 
+            var instance = visualStudioInstances.Length == 1 ? visualStudioInstances[0]
                 : SelectVisualStudioInstance(visualStudioInstances);
 
             Console.WriteLine($"Using MSBuild at '{instance.MSBuildPath}'.");
@@ -33,6 +33,11 @@ namespace NUnitMigrator.Core
                 foreach (var projectId in solution.ProjectIds)
                 {
                     var project = solution.GetProject(projectId);
+                    Console.WriteLine($"Project.CompilationOptions.Platform: {project.CompilationOptions.Platform}");
+                    Console.WriteLine($"Project.CompilationOptions.Language: {project.CompilationOptions.Language}");
+                    Console.WriteLine($"Project.CompilationOptions.OptimizationLevel: {project.CompilationOptions.OptimizationLevel}");
+                    Console.WriteLine($"Project.CompilationOptions.WarningLevel: {project.CompilationOptions.WarningLevel}");
+                    Console.WriteLine($"Project.CompilationOptions.OutputKind: {project.CompilationOptions.OutputKind}");
                     foreach (var documentId in project.DocumentIds)
                     {
                         Document document = project.GetDocument(documentId);
@@ -48,19 +53,27 @@ namespace NUnitMigrator.Core
                             WriteLineInColor("Skipped", ConsoleColor.Yellow);
                             continue;
                         }
-                        
-                        var result = rewriter.Visit(tree.GetRoot());
-                        if(rewriter.Unsupported.Count>0)
-                            WriteLineInColor($"{rewriter.Unsupported.Count} errors encountered", ConsoleColor.Red);
 
-                        foreach (var unsupprotedNode in rewriter.Unsupported)
-                        {
-                            Console.WriteLine(unsupprotedNode.ToString());
-                        }
-                        
-                        WriteLineInColor($"{document.Name} Processed", ConsoleColor.Green);
+                        var result = rewriter.Visit(tree.GetRoot());
                         documentCount++;
                         solution = solution.WithDocumentSyntaxRoot(documentId, result);
+
+                        if (rewriter.Unsupported.Count > 0)
+                        {
+                            WriteLineInColor($"{rewriter.Unsupported.Count} errors encountered", ConsoleColor.Red);
+
+                            foreach (var unsupprotedNode in rewriter.Unsupported)
+                            {
+                                Console.WriteLine(unsupprotedNode.ToString());
+                            }
+
+                            WriteLineInColor($"{document.Name} Processed", ConsoleColor.Green);
+                        }
+                        else
+                        {
+                            WriteLineInColor("Processed", ConsoleColor.Green);
+                        }
+
                     }
                 }
                 Console.WriteLine($"Changed {documentCount} documents");

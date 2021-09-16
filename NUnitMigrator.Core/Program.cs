@@ -16,18 +16,10 @@ namespace NUnitMigrator.Core
     
     class Program
     {
-        [STAThreadAttribute]
+
         static void Main(string[] args)
         {
-
-            OpenFileDialog dialog = new OpenFileDialog();
-            if (DialogResult.OK == dialog.ShowDialog())
-            {
-                string path = dialog.FileName;
-                MainLogic.Migrate(path);
-            }
-            Console.ReadLine();
-            //throw new Exception("Should not be run like this");
+            throw new Exception("Should not be run like this");
         }
 
     }
