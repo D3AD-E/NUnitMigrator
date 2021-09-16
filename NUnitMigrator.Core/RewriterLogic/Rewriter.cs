@@ -568,11 +568,11 @@ namespace NUnitMigrator.Core.RewriterLogic
                 }
                 else if ("IsEmpty".Equals(memberName))
                 {
-                    node = TransformEmptyExpression(node, memberAccess, true);
+                    node = TransformEmptyExpression(node, memberAccess, false);
                 }
                 else if ("IsNotEmpty".Equals(memberName))
                 {
-                    node = TransformEmptyExpression(node, memberAccess, false);
+                    node = TransformEmptyExpression(node, memberAccess, true);
                 }
                 else if ("IsNaN".Equals(memberName))
                 {
@@ -602,11 +602,11 @@ namespace NUnitMigrator.Core.RewriterLogic
                 }
                 else if ("IsEmpty".Equals(memberName))
                 {
-                    node = TransformCollectionEmpty(node, collectionMemberAccess, true);
+                    node = TransformCollectionEmpty(node, collectionMemberAccess, false);
                 }
                 else if ("IsNotEmpty".Equals(memberName))
                 {
-                    node = TransformCollectionEmpty(node, collectionMemberAccess, false);
+                    node = TransformCollectionEmpty(node, collectionMemberAccess, true);
                 }
                 else
                 {
@@ -647,11 +647,11 @@ namespace NUnitMigrator.Core.RewriterLogic
                 var memberName = directoryMemberAccess.Name?.ToString();
                 if ("Exists".Equals(memberName))
                 {
-                    node = TransformDirectoryExists(node, directoryMemberAccess, true);
+                    node = TransformDirectoryExists(node, directoryMemberAccess, false);
                 }
                 else if ("DoesNotExist".Equals(memberName))
                 {
-                    node = TransformDirectoryExists(node, directoryMemberAccess, false);
+                    node = TransformDirectoryExists(node, directoryMemberAccess, true);
                 }
                 else
                 {
@@ -669,11 +669,11 @@ namespace NUnitMigrator.Core.RewriterLogic
                 var memberName = fileMemberAccess.Name?.ToString();
                 if ("Exists".Equals(memberName))
                 {
-                    node = TransformFileExists(node, fileMemberAccess, true);
+                    node = TransformFileExists(node, fileMemberAccess, false);
                 }
                 else if ("DoesNotExist".Equals(memberName))
                 {
-                    node = TransformFileExists(node, fileMemberAccess, false);
+                    node = TransformFileExists(node, fileMemberAccess, true);
                 }
                 else
                 {
@@ -705,11 +705,12 @@ namespace NUnitMigrator.Core.RewriterLogic
 
             var matchTypeArgument = SyntaxFactory.Argument(MSTestSyntaxFactory.CreateObjectInstance(typeof(System.Text.RegularExpressions.Regex).FullName,
                             arg1)).NormalizeWhitespace();
-            node = TransformSimpleAssertWithArguments(node, memberAccess, "Matches", arg0, matchTypeArgument);
+            node = TransformSimpleAssertWithArguments(node, memberAccess, "Matches", 2, arg0, matchTypeArgument);
             return node;
         }
 
-        private InvocationExpressionSyntax TransformCollectionEmpty(InvocationExpressionSyntax node, MemberAccessExpressionSyntax memberAccess, bool isEmpty)
+        private InvocationExpressionSyntax TransformCollectionEmpty(InvocationExpressionSyntax node, 
+            MemberAccessExpressionSyntax memberAccess, bool hasNot)
         {
             if (node.ArgumentList == null)
             {
@@ -723,28 +724,14 @@ namespace NUnitMigrator.Core.RewriterLogic
             }
             var arg = node.ArgumentList.Arguments[0];
 
-            var argList = new SeparatedSyntaxList<ArgumentSyntax>();
             var isEmptyExpression = SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression,
                 arg.Expression, SyntaxFactory.IdentifierName("Count"));
 
             var binaryExpression = SyntaxFactory.BinaryExpression(SyntaxKind.EqualsExpression, isEmptyExpression, SyntaxFactory.ParseExpression("0"));
-            argList = argList.Add(SyntaxFactory.Argument(binaryExpression));
 
-            var remainingArguments = node.ArgumentList.Arguments.Skip(1);
-            if (remainingArguments.Any())
-                argList = argList.AddRange(remainingArguments);
-
-            var trivia = memberAccess.GetLeadingTrivia();
-
-            memberAccess = isEmpty ?
-                memberAccess.WithName(SyntaxFactory.IdentifierName("IsTrue"))
-                : memberAccess.WithName(SyntaxFactory.IdentifierName("IsFalse"));
-
-            memberAccess = memberAccess.WithExpression(SyntaxFactory.IdentifierName("Assert"))
-                .WithLeadingTrivia(trivia);
-            node = node.WithExpression(memberAccess).WithArgumentList(
-                SyntaxFactory.ArgumentList(argList).NormalizeWhitespace());
-
+            var nodeName = hasNot ? "IsFalse" : "IsTrue";
+            node = TransformSimpleAssertWithArguments(node, memberAccess, nodeName, 2, SyntaxFactory.Argument(binaryExpression));
+            node = node.ChangeName("Assert");
             return node;
         }
 
@@ -789,7 +776,8 @@ namespace NUnitMigrator.Core.RewriterLogic
             return node;
         }
 
-        private InvocationExpressionSyntax TransformIsAllConstraints(InvocationExpressionSyntax node, MemberAccessExpressionSyntax memberAccess, MemberAccessExpressionSyntax constraintMemberAccess, bool hasNot)
+        private InvocationExpressionSyntax TransformIsAllConstraints(InvocationExpressionSyntax node, 
+            MemberAccessExpressionSyntax memberAccess, MemberAccessExpressionSyntax constraintMemberAccess, bool hasNot)
         {
             var constraintName = constraintMemberAccess.Name?.ToString();
             if ("Null".Equals(constraintName) && hasNot)
@@ -814,7 +802,8 @@ namespace NUnitMigrator.Core.RewriterLogic
             return node;
         }
 
-        private InvocationExpressionSyntax TransformHasConstraints(InvocationExpressionSyntax node, MemberAccessExpressionSyntax memberAccess, MemberAccessExpressionSyntax constraintMemberAccess, bool hasNot)
+        private InvocationExpressionSyntax TransformHasConstraints(InvocationExpressionSyntax node, 
+            MemberAccessExpressionSyntax memberAccess, MemberAccessExpressionSyntax constraintMemberAccess, bool hasNot)
         {
             var constraintName = constraintMemberAccess.Name?.ToString();
             if ("Member".Equals(constraintName))
@@ -858,7 +847,7 @@ namespace NUnitMigrator.Core.RewriterLogic
             {
                 var nodeName = hasNot ? "DoesNotContain" : "Contains";
                 var newArg1 = arg1Expression.ArgumentList.Arguments[0];
-                node = TransformSimpleAssertWithArguments(node, memberAccess, nodeName, arg0, newArg1);
+                node = TransformSimpleAssertWithArguments(node, memberAccess, nodeName, 2, arg0, newArg1);
             }
             else
             {
@@ -892,7 +881,8 @@ namespace NUnitMigrator.Core.RewriterLogic
             return node;
         }
 
-        private InvocationExpressionSyntax TransformContainsValueConstraint(InvocationExpressionSyntax node, MemberAccessExpressionSyntax memberAccess, bool hasNot)
+        private InvocationExpressionSyntax TransformContainsValueConstraint(InvocationExpressionSyntax node, 
+            MemberAccessExpressionSyntax memberAccess, bool hasNot)
         {
             var arg0 = node.ArgumentList.Arguments[0];
             var arg1 = node.ArgumentList.Arguments[1];
@@ -902,7 +892,7 @@ namespace NUnitMigrator.Core.RewriterLogic
                 var invocation = MSTestSyntaxFactory.CreateInvocation(arg0.Expression, "ContainsValue", invocationExpression.ArgumentList.Arguments[0]);
                 var newArg = SyntaxFactory.Argument(invocation);
                 var nodeName = hasNot ? "IsFalse" : "IsTrue";
-                node = TransformSimpleAssertWithArguments(node, memberAccess, nodeName, newArg);
+                node = TransformSimpleAssertWithArguments(node, memberAccess, nodeName, 2, newArg);
             }
             else
             {
@@ -917,7 +907,8 @@ namespace NUnitMigrator.Core.RewriterLogic
             return node;
         }
 
-        private InvocationExpressionSyntax TransformContainsKeyConstraint(InvocationExpressionSyntax node, MemberAccessExpressionSyntax memberAccess, bool hasNot)
+        private InvocationExpressionSyntax TransformContainsKeyConstraint(InvocationExpressionSyntax node, 
+            MemberAccessExpressionSyntax memberAccess, bool hasNot)
         {
             var arg0 = node.ArgumentList.Arguments[0];
             var arg1 = node.ArgumentList.Arguments[1];
@@ -927,7 +918,7 @@ namespace NUnitMigrator.Core.RewriterLogic
                 var invocation = MSTestSyntaxFactory.CreateInvocation(arg0.Expression, "ContainsKey", invocationExpression.ArgumentList.Arguments[0]);
                 var newArg = SyntaxFactory.Argument(invocation);
                 var nodeName = hasNot ? "IsFalse" : "IsTrue";
-                node = TransformSimpleAssertWithArguments(node, memberAccess, nodeName, newArg);
+                node = TransformSimpleAssertWithArguments(node, memberAccess, nodeName, 2, newArg);
             }
             else
             {
@@ -965,8 +956,8 @@ namespace NUnitMigrator.Core.RewriterLogic
             return node;
         }
 
-        private InvocationExpressionSyntax TransformExistDirectoryConstraint(InvocationExpressionSyntax node, MemberAccessExpressionSyntax memberAccess, 
-            bool hasNot)
+        private InvocationExpressionSyntax TransformExistDirectoryConstraint(InvocationExpressionSyntax node, 
+            MemberAccessExpressionSyntax memberAccess, bool hasNot)
         {
             if (node.ArgumentList == null)
             {
@@ -998,7 +989,7 @@ namespace NUnitMigrator.Core.RewriterLogic
                 return node;
             }
             var nodeName = hasNot ? "IsFalse" : "IsTrue";
-            node = TransformSimpleAssertWithArguments(node, memberAccess, nodeName, SyntaxFactory.Argument(directoryExists));
+            node = TransformSimpleAssertWithArguments(node, memberAccess, nodeName, 2, SyntaxFactory.Argument(directoryExists));
             node = node.ChangeName("Assert");
 
             return node;
@@ -1093,11 +1084,12 @@ namespace NUnitMigrator.Core.RewriterLogic
                 SyntaxFactory.ParseExpression(amount));
 
             var nodeName = hasNot ? "IsFalse" : "IsTrue";
-            node = TransformSimpleAssertWithArguments(node, memberAccess, nodeName, SyntaxFactory.Argument(binaryExpression));
+            node = TransformSimpleAssertWithArguments(node, memberAccess, nodeName, 2, SyntaxFactory.Argument(binaryExpression));
             return node;
         }
 
-        private InvocationExpressionSyntax TransformSubsetOfConstraint(InvocationExpressionSyntax node, MemberAccessExpressionSyntax memberAccess, bool hasNot)
+        private InvocationExpressionSyntax TransformSubsetOfConstraint(InvocationExpressionSyntax node, 
+            MemberAccessExpressionSyntax memberAccess, bool hasNot)
         {
             var arg0 = node.ArgumentList.Arguments[0];
             var arg1 = node.ArgumentList.Arguments[1];
@@ -1105,7 +1097,7 @@ namespace NUnitMigrator.Core.RewriterLogic
             {
                 var nodeName = hasNot ? "IsNotSubsetOf" : "IsSubsetOf";
                 var newArg1 = arg1Expression.ArgumentList.Arguments[0];
-                node = TransformSimpleAssertWithArguments(node, memberAccess, nodeName, arg0, newArg1);
+                node = TransformSimpleAssertWithArguments(node, memberAccess, nodeName, 2, arg0, newArg1);
             }
             else
             {
@@ -1120,7 +1112,8 @@ namespace NUnitMigrator.Core.RewriterLogic
             return node;
         }
 
-        private InvocationExpressionSyntax TransformEquivalentToConstraint(InvocationExpressionSyntax node, MemberAccessExpressionSyntax memberAccess, bool hasNot)
+        private InvocationExpressionSyntax TransformEquivalentToConstraint(InvocationExpressionSyntax node, 
+            MemberAccessExpressionSyntax memberAccess, bool hasNot)
         {
             var arg0 = node.ArgumentList.Arguments[0];
             var arg1 = node.ArgumentList.Arguments[1];
@@ -1128,7 +1121,7 @@ namespace NUnitMigrator.Core.RewriterLogic
             {
                 var nodeName = hasNot ? "AreNotEquivalent" : "AreEquivalent";
                 var newArg1 = arg1Expression.ArgumentList.Arguments[0];
-                node = TransformSimpleAssertWithArguments(node, memberAccess, nodeName, arg0, newArg1);
+                node = TransformSimpleAssertWithArguments(node, memberAccess, nodeName, 2, arg0, newArg1);
                 node = node.ChangeName("CollectionAssert");
             }
             else
@@ -1186,7 +1179,8 @@ namespace NUnitMigrator.Core.RewriterLogic
             return node;
         }
 
-        private InvocationExpressionSyntax TransformContainConstraint(InvocationExpressionSyntax node, MemberAccessExpressionSyntax memberAccess, bool hasNot)
+        private InvocationExpressionSyntax TransformContainConstraint(InvocationExpressionSyntax node, 
+            MemberAccessExpressionSyntax memberAccess, bool hasNot)
         {
             var arg0 = node.ArgumentList.Arguments[0];
             var arg1 = node.ArgumentList.Arguments[1];
@@ -1196,7 +1190,7 @@ namespace NUnitMigrator.Core.RewriterLogic
                 var invocation = MSTestSyntaxFactory.CreateInvocation(arg0.Expression, "Contains", invocationExpression.ArgumentList.Arguments[0]);
                 var newArg = SyntaxFactory.Argument(invocation);
                 var nodeName = hasNot ? "IsFalse" : "IsTrue";
-                node = TransformSimpleAssertWithArguments(node, memberAccess, nodeName, newArg);
+                node = TransformSimpleAssertWithArguments(node, memberAccess, nodeName, 2, newArg);
             }
             else
             {
@@ -1211,14 +1205,15 @@ namespace NUnitMigrator.Core.RewriterLogic
             return node;
         }
 
-        private InvocationExpressionSyntax TransformEmptyStringConstraint(InvocationExpressionSyntax node, MemberAccessExpressionSyntax memberAccess, bool hasNot)
+        private InvocationExpressionSyntax TransformEmptyStringConstraint(InvocationExpressionSyntax node, 
+            MemberAccessExpressionSyntax memberAccess, bool hasNot)
         {
             var arg = node.ArgumentList.Arguments[0];
             var invocation = MSTestSyntaxFactory.CreateInvocation("string", "IsNullOrEmpty", arg);
 
             var newArg = SyntaxFactory.Argument(invocation);
             var nodeName = hasNot ? "IsFalse" : "IsTrue";
-            node = TransformSimpleAssertWithArguments(node, memberAccess, nodeName, newArg);
+            node = TransformSimpleAssertWithArguments(node, memberAccess, nodeName, 2, newArg);
             return node;
         }
 
@@ -1231,7 +1226,7 @@ namespace NUnitMigrator.Core.RewriterLogic
             var internalArg1 = arg1Expression.ArgumentList.Arguments[0];
             var matchTypeArgument = SyntaxFactory.Argument(MSTestSyntaxFactory.CreateObjectInstance(typeof(System.Text.RegularExpressions.Regex).FullName,
                             internalArg1)).NormalizeWhitespace();
-            node = TransformSimpleAssertWithArguments(node, memberAccess, "Matches", arg0, matchTypeArgument);
+            node = TransformSimpleAssertWithArguments(node, memberAccess, "Matches", 2, arg0, matchTypeArgument);
             node = node.ChangeName("StringAssert");
             return node;
         }
@@ -1244,7 +1239,7 @@ namespace NUnitMigrator.Core.RewriterLogic
             var arg1Expression = arg1.Expression as InvocationExpressionSyntax;
 
             var newArg1 = arg1Expression.ArgumentList.Arguments[0];
-            node = TransformSimpleAssertWithArguments(node, memberAccess, invocationName, arg0, newArg1);
+            node = TransformSimpleAssertWithArguments(node, memberAccess, invocationName, 2, arg0, newArg1);
             node = node.ChangeName("StringAssert");
             return node;
         }
@@ -1267,7 +1262,7 @@ namespace NUnitMigrator.Core.RewriterLogic
             }
             if(newArg1!= null)
             {
-                node = TransformSimpleAssertWithArguments(node, memberAccess, "IsInstanceOfType", arg0, newArg1);
+                node = TransformSimpleAssertWithArguments(node, memberAccess, "IsInstanceOfType", 2, arg0, newArg1);
             }
             else
             {
@@ -1295,16 +1290,11 @@ namespace NUnitMigrator.Core.RewriterLogic
             }
 
             var arg = node.ArgumentList.Arguments[0];
-
-            var invocationArgList = new SeparatedSyntaxList<ArgumentSyntax>();
-            invocationArgList = invocationArgList.Add(arg);
-
-            var isNanExpression = SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression,
-                SyntaxFactory.IdentifierName("double"), SyntaxFactory.IdentifierName("IsNaN"));
-            var doubleArg = SyntaxFactory.Argument(SyntaxFactory.InvocationExpression(isNanExpression, SyntaxFactory.ArgumentList(invocationArgList)));
+            var invocation = MSTestSyntaxFactory.CreateInvocation("double", "IsNaN", arg);
+            var doubleArg = SyntaxFactory.Argument(invocation);
 
             var nodeName = hasNot ? "IsFalse" : "IsTrue";
-            node = TransformSimpleAssertWithArguments(node, memberAccess, nodeName, doubleArg);
+            node = TransformSimpleAssertWithArguments(node, memberAccess, nodeName, 2, doubleArg);
             return node;
         }
 
@@ -1360,7 +1350,7 @@ namespace NUnitMigrator.Core.RewriterLogic
             {
                 var nodeName = hasNot ? "AreNotEqual" : "AreEqual";
                 var newArg1 = arg1Expression.ArgumentList.Arguments[0];
-                node = TransformSimpleAssertWithArguments(node, memberAccess, nodeName, arg0, newArg1);
+                node = TransformSimpleAssertWithArguments(node, memberAccess, nodeName, 2, arg0, newArg1);
                 //node = node.ChangeName("CollectionAssert");
             }
             else
@@ -1376,12 +1366,12 @@ namespace NUnitMigrator.Core.RewriterLogic
         }
 
         private InvocationExpressionSyntax TransformSimpleAssertWithArguments(InvocationExpressionSyntax node, 
-            MemberAccessExpressionSyntax memberAccess, string nodeName, params ArgumentSyntax[] arguments)
+            MemberAccessExpressionSyntax memberAccess, string nodeName,int skipAmount, params ArgumentSyntax[] arguments)
         {
             var argList = new SeparatedSyntaxList<ArgumentSyntax>();
             argList = argList.AddRange(arguments);
 
-            var remainingArguments = node.ArgumentList.Arguments.Skip(2);
+            var remainingArguments = node.ArgumentList.Arguments.Skip(skipAmount);
             if (remainingArguments.Any())
                 argList = argList.AddRange(remainingArguments);
 
@@ -1395,21 +1385,12 @@ namespace NUnitMigrator.Core.RewriterLogic
             MemberAccessExpressionSyntax memberAccess, string nodeName)
         {
             var arg = node.ArgumentList.Arguments[0];
-            var argList = new SeparatedSyntaxList<ArgumentSyntax>();
-            argList = argList.Add(arg);
-
-            var remainingArguments = node.ArgumentList.Arguments.Skip(2);
-            if (remainingArguments.Any())
-                argList = argList.AddRange(remainingArguments);
-
-            memberAccess = memberAccess.WithName(SyntaxFactory.IdentifierName(nodeName));
-            node = node.WithExpression(memberAccess).WithArgumentList(
-                SyntaxFactory.ArgumentList(argList).NormalizeWhitespace());
+            node = TransformSimpleAssertWithArguments(node, memberAccess, nodeName, 2, arg);
             return node;
         }
 
         private InvocationExpressionSyntax TransformFileExists(InvocationExpressionSyntax node, 
-            MemberAccessExpressionSyntax memberAccess, bool doesExist)
+            MemberAccessExpressionSyntax memberAccess, bool hasNot)
         {
             if (node.ArgumentList == null)
             {
@@ -1424,20 +1405,20 @@ namespace NUnitMigrator.Core.RewriterLogic
             var arg = node.ArgumentList.Arguments[0];
             var type = _semanticModel.GetTypeInfo(arg.Expression);
 
-            ExpressionSyntax directoryExists = null;
+            ExpressionSyntax fileExists = null;
             if (type.ConvertedType?.SpecialType == SpecialType.System_String)
             {
-                directoryExists = SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression,
+                fileExists = SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression,
                     SyntaxFactory.IdentifierName("File"), SyntaxFactory.IdentifierName("Exists"));
 
-                directoryExists = SyntaxFactory.InvocationExpression(directoryExists, node.ArgumentList);
+                fileExists = SyntaxFactory.InvocationExpression(fileExists, node.ArgumentList);
             }
             else if (_semanticModel.TypeSymbolMatchesType(type.ConvertedType, typeof(System.IO.FileInfo)))
             {
-                directoryExists = SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression,
+                fileExists = SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression,
                     arg.Expression, SyntaxFactory.IdentifierName("Exists"));
             }
-            if (directoryExists is null)
+            if (fileExists is null)
             {
                 Unsupported.Add(new UnsupportedNodeInfo
                 {
@@ -1448,29 +1429,15 @@ namespace NUnitMigrator.Core.RewriterLogic
             }
             else
             {
-                var argList = new SeparatedSyntaxList<ArgumentSyntax>();
-                argList = argList.Add(SyntaxFactory.Argument(directoryExists));
-
-                var remainingArguments = node.ArgumentList.Arguments.Skip(1);
-                if (remainingArguments.Any())
-                    argList = argList.AddRange(remainingArguments);
-
-                var trivia = memberAccess.GetLeadingTrivia();
-
-                memberAccess = doesExist ?
-                    memberAccess.WithName(SyntaxFactory.IdentifierName("IsTrue"))
-                    : memberAccess.WithName(SyntaxFactory.IdentifierName("IsFalse"));
-
-                memberAccess = memberAccess.WithExpression(SyntaxFactory.IdentifierName("Assert"))
-                    .WithLeadingTrivia(trivia);
-                node = node.WithExpression(memberAccess).WithArgumentList(
-                    SyntaxFactory.ArgumentList(argList).NormalizeWhitespace());
+                var nodeName = hasNot ? "IsFalse" : "IsTrue";
+                node = TransformSimpleAssertWithArguments(node, memberAccess, nodeName, 1, SyntaxFactory.Argument(fileExists));
+                node = node.ChangeName("Assert");
             }
             return node;
         }
 
         private InvocationExpressionSyntax TransformDirectoryExists(InvocationExpressionSyntax node, 
-            MemberAccessExpressionSyntax memberAccess, bool doesExist)
+            MemberAccessExpressionSyntax memberAccess, bool hasNot)
         {
             if (node.ArgumentList == null)
             {
@@ -1509,23 +1476,9 @@ namespace NUnitMigrator.Core.RewriterLogic
             }
             else
             {
-                var argList = new SeparatedSyntaxList<ArgumentSyntax>();
-                argList = argList.Add(SyntaxFactory.Argument(directoryExists));
-
-                var remainingArguments = node.ArgumentList.Arguments.Skip(1);
-                if (remainingArguments.Any())
-                    argList = argList.AddRange(remainingArguments);
-
-                var trivia = memberAccess.GetLeadingTrivia();
-
-                memberAccess = doesExist ? 
-                    memberAccess.WithName(SyntaxFactory.IdentifierName("IsTrue")) 
-                    : memberAccess.WithName(SyntaxFactory.IdentifierName("IsFalse"));
-
-                memberAccess = memberAccess.WithExpression(SyntaxFactory.IdentifierName("Assert"))
-                    .WithLeadingTrivia(trivia);
-                node = node.WithExpression(memberAccess).WithArgumentList(
-                    SyntaxFactory.ArgumentList(argList).NormalizeWhitespace());
+                var nodeName = hasNot ? "IsFalse" : "IsTrue";
+                node = TransformSimpleAssertWithArguments(node, memberAccess, nodeName, 1, SyntaxFactory.Argument(directoryExists));
+                node = node.ChangeName("Assert");
             }
             return node;
         }
@@ -1544,41 +1497,13 @@ namespace NUnitMigrator.Core.RewriterLogic
             }
 
             var arg = node.ArgumentList.Arguments[0];
-            //var type = _semanticModel.GetTypeInfo(arg.Expression);
-
-            //if (type.ConvertedType?.SpecialType != SpecialType.System_Double)
-            //{
-            //    Unsupported.Add(new UnsupportedNodeInfo
-            //    {
-            //        Info = "Unsupported arguments in invocation expression",
-            //        Location = node.GetLocation(),
-            //        NodeName = node.ToString()
-            //    });
-            //    return node;
-            //}
-
-            var argList = new SeparatedSyntaxList<ArgumentSyntax>();
-            var invocationArgList = new SeparatedSyntaxList<ArgumentSyntax>();
-            invocationArgList = invocationArgList.Add(arg);
-
-            var isNanExpression = SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression,
-                SyntaxFactory.IdentifierName("double"), SyntaxFactory.IdentifierName("IsNaN"));
-
-            argList = argList.Add(SyntaxFactory.Argument(SyntaxFactory.InvocationExpression(isNanExpression, SyntaxFactory.ArgumentList(invocationArgList))));
-
-            var remainingArguments = node.ArgumentList.Arguments.Skip(1);
-            if (remainingArguments.Any())
-                argList = argList.AddRange(remainingArguments);
-
-            memberAccess = memberAccess.WithName(SyntaxFactory.IdentifierName("IsTrue"));
-            node = node.WithExpression(memberAccess).WithArgumentList(
-                SyntaxFactory.ArgumentList(argList).NormalizeWhitespace());
-
+            var invocation = MSTestSyntaxFactory.CreateInvocation("double", "IsNaN", arg);
+            node = TransformSimpleAssertWithArguments(node, memberAccess, "IsTrue", 1, SyntaxFactory.Argument(invocation));
             return node;
         }
 
         private InvocationExpressionSyntax TransformEmptyExpression(InvocationExpressionSyntax node, 
-            MemberAccessExpressionSyntax memberAccess, bool isEmpty)
+            MemberAccessExpressionSyntax memberAccess, bool hasNot)
         {
             if (node.ArgumentList == null)
             {
@@ -1603,23 +1528,9 @@ namespace NUnitMigrator.Core.RewriterLogic
                 });
                 return node;
             }
-            var argList = new SeparatedSyntaxList<ArgumentSyntax>();
-
-            var stringIsEmpty = SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression,
-                SyntaxFactory.IdentifierName("string"), SyntaxFactory.IdentifierName("IsNullOrEmpty"));
-            var stringArgList = new SeparatedSyntaxList<ArgumentSyntax>();
-            stringArgList = stringArgList.Add(arg);
-            argList = argList.Add(SyntaxFactory.Argument(SyntaxFactory.InvocationExpression(stringIsEmpty,
-                SyntaxFactory.ArgumentList(stringArgList))));
-
-            var remainingArguments = node.ArgumentList.Arguments.Skip(1);
-            if (remainingArguments.Any())
-                argList = argList.AddRange(remainingArguments);
-
-            memberAccess = isEmpty ? memberAccess.WithName(SyntaxFactory.IdentifierName("IsTrue")) 
-                : memberAccess.WithName(SyntaxFactory.IdentifierName("IsFalse"));
-            node = node.WithExpression(memberAccess).WithArgumentList(
-                SyntaxFactory.ArgumentList(argList).NormalizeWhitespace());
+            var invocation = MSTestSyntaxFactory.CreateInvocation("string", "IsNullOrEmpty", arg);
+            var nodeName = hasNot ? "IsFalse" : "IsTrue";
+            node = TransformSimpleAssertWithArguments(node, memberAccess, nodeName, 1, SyntaxFactory.Argument(invocation));
 
             return node;
         }
@@ -1641,35 +1552,13 @@ namespace NUnitMigrator.Core.RewriterLogic
 
             if (memberAccess.Name is GenericNameSyntax genericNameSyntax && genericNameSyntax.TypeArgumentList.Arguments.Count == 1)
             {
-                var remainingArguments = node.ArgumentList.Arguments.Skip(1);
-
-                var argList = new SeparatedSyntaxList<ArgumentSyntax>();
-                argList = argList.Add(arg0);
-                argList = argList.Add(SyntaxFactory.Argument(SyntaxFactory.TypeOfExpression(genericNameSyntax.TypeArgumentList.Arguments[0])));
-                if (remainingArguments.Any())
-                {
-                    argList = argList.AddRange(remainingArguments);
-                }
-
-                memberAccess = memberAccess.WithName(SyntaxFactory.IdentifierName("IsInstanceOfType"));
-                node = node.WithExpression(memberAccess).WithArgumentList(SyntaxFactory.ArgumentList(argList)
-                    .NormalizeWhitespace());
+                var expression = SyntaxFactory.TypeOfExpression(genericNameSyntax.TypeArgumentList.Arguments[0]);
+                node = TransformSimpleAssertWithArguments(node, memberAccess, "IsInstanceOfType", 1, arg0, SyntaxFactory.Argument(expression));
             }
             else if (node.ArgumentList.Arguments.Count >= 2)
             {
                 var arg1 = node.ArgumentList.Arguments[1];
-
-                var argList = new SeparatedSyntaxList<ArgumentSyntax>();
-                argList = argList.Add(arg1);
-                argList = argList.Add(arg0);
-                var remainingArguments = node.ArgumentList.Arguments.Skip(2);
-                if (remainingArguments.Any())
-                {
-                    argList = argList.AddRange(remainingArguments);
-                }
-
-                memberAccess = memberAccess.WithName(SyntaxFactory.IdentifierName("IsInstanceOfType"));
-                node = node.WithExpression(memberAccess).WithArgumentList(SyntaxFactory.ArgumentList(argList).NormalizeWhitespace());
+                node = TransformSimpleAssertWithArguments(node, memberAccess, "IsInstanceOfType", 2, arg1, arg0);
             }
 
             return node;
