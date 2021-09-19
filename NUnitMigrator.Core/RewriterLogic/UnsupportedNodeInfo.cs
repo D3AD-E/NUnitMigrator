@@ -17,7 +17,7 @@ namespace NUnitMigrator.Core.RewriterLogic
 
         public override string ToString()
         {
-            return $"{Info} at [{Location.SourceSpan.Start}...{Location.SourceSpan.End}] for {NodeName}";
+            return $"{Info} at [{Location.GetLineSpan().StartLinePosition.Line}:{Location.GetLineSpan().StartLinePosition.Character}] for {NodeName}";
         }
     }
 }

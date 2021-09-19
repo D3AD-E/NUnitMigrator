@@ -47,7 +47,7 @@ namespace NUnitMigrator.App.Logic
                         var model = await document.GetSemanticModelAsync();
                         var rewriter = new Rewriter(model);
                         var tree = await document.GetSyntaxTreeAsync();
-                        var root = tree.GetRoot();
+                        var root = await tree.GetRootAsync();
                         if (!IsNUnitTestFile(root))
                         {
                             WriteLineInColor("Skipped", ConsoleColor.Yellow);

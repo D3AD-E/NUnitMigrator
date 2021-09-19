@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NUnitMigrator.Tests", "NUni
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NUnitMigrator.App", "NUnitMigrator.App\NUnitMigrator.App.csproj", "{3137F298-B814-49A7-8E91-68D0BF543CC9}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NUnitMigrator.Extention", "NUnitMigrator.Extention\NUnitMigrator.Extention.csproj", "{1739E92F-BED9-4EBB-9795-0AFBAEDE794F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,10 @@ Global
 		{3137F298-B814-49A7-8E91-68D0BF543CC9}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3137F298-B814-49A7-8E91-68D0BF543CC9}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3137F298-B814-49A7-8E91-68D0BF543CC9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1739E92F-BED9-4EBB-9795-0AFBAEDE794F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1739E92F-BED9-4EBB-9795-0AFBAEDE794F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1739E92F-BED9-4EBB-9795-0AFBAEDE794F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1739E92F-BED9-4EBB-9795-0AFBAEDE794F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
