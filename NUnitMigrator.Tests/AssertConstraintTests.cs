@@ -187,7 +187,7 @@ public class A
 { 
     void Test()
     {
-        Assert.That(""Hello"", Does.StartWith(""He"");
+        Assert.That(""Hello"", Does.StartWith(""He""));
     }
 }";
             const string expected = @"

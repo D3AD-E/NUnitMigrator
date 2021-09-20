@@ -34,6 +34,7 @@ namespace NUnitMigrator.Extention
         /// NUnitMigrator.ExtentionPackage GUID string.
         /// </summary>
         public const string PackageGuidString = "b6bfff19-b52e-48b5-ab81-10480ea91c5f";
+        private const string OutputWindowPaneGuid = "4FE0A4A9-BF71-494F-AA8C-B67DF0ECAC80";
         private ErrorListProvider _errorListProvider;
         private IVsOutputWindowPane _outputWindowPane;
 
@@ -47,9 +48,10 @@ namespace NUnitMigrator.Extention
         /// <param name="progress">A provider for progress updates.</param>
         /// <returns>A task representing the async work of package initialization, or an already completed task if there is none. Do not return null from this method.</returns>
         protected override async Task InitializeAsync(CancellationToken cancellationToken, IProgress<ServiceProgressData> progress)
-        {   
+        {
             // When initialized asynchronously, the current thread may be a background thread at this point.
             // Do any initialization that requires the UI thread after switching to the UI thread.
+            await base.InitializeAsync(cancellationToken, progress);
             await this.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
 
             _outputWindowPane = SetupPane();
@@ -62,13 +64,16 @@ namespace NUnitMigrator.Extention
             ThreadHelper.ThrowIfNotOnUIThread();
             IVsOutputWindow outWindow = Package.GetGlobalService(typeof(SVsOutputWindow)) as IVsOutputWindow;
 
-            Guid generalPaneGuid = VSConstants.GUID_OutWindowGeneralPane;
-            IVsOutputWindowPane generalPane;
-            outWindow.GetPane(ref generalPaneGuid, out generalPane);
+            //Guid generalPaneGuid = VSConstants.GUID_OutWindowGeneralPane;
+            //IVsOutputWindowPane generalPane;
+            //outWindow.GetPane(ref generalPaneGuid, out generalPane);
 
+            var guid = new Guid(OutputWindowPaneGuid);
+            outWindow.CreatePane(ref guid, "NUnitMigrator", 1, 1);
+            outWindow.GetPane(ref guid, out var pane);
             //generalPane.OutputString("Hello World!");
-            //generalPane.Activate(); 
-            return generalPane;
+            pane.Activate(); 
+            return pane;
         }
 
     #endregion

@@ -101,14 +101,7 @@ namespace NUnitMigrator.Extention
         /// <param name="e">Event args.</param>
         private async void Execute(object sender, EventArgs e)
         {
-            //ThreadHelper.ThrowIfNotOnUIThread();
-            var commandService = await ServiceProvider.GetServiceAsync(typeof(IMenuCommandService)) as OleMenuCommandService;
-            if (commandService != null)
-            {
-                var menuCommandID = new CommandID(CommandSet, CommandId);
-                var menuItem = new MenuCommand(async (s, ev) => await InvokeRefactoringAsync(s, ev), menuCommandID);
-                commandService.AddCommand(menuItem);
-            }
+            await InvokeRefactoringAsync();
             //string message = string.Format(CultureInfo.CurrentCulture, "Inside {0}.MenuItemCallback()", this.GetType().FullName);
             //string title = "MigrateProjectCommand";
 
@@ -122,7 +115,9 @@ namespace NUnitMigrator.Extention
             //    OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
         }
 
-        private async Task InvokeRefactoringAsync(object sender, EventArgs e)
+    
+
+        private async Task InvokeRefactoringAsync()
         {
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
             try
@@ -143,7 +138,7 @@ namespace NUnitMigrator.Extention
                     {
                         var documentIds = GetSupportedDocumentIds(project);
 
-                        OutputMessage($"Updating project {project.FilePath}.");
+                        OutputMessage($"Updating project {project.FilePath}");
 
                         foreach (var documentId in documentIds)
                         {
@@ -168,10 +163,10 @@ namespace NUnitMigrator.Extention
                         {
                             if (!workspace.TryApplyChanges(newSolution))
                             {
-                                OutputMessage("Changes not saved.");
+                                OutputMessage("Changes not saved");
                             }
 
-                            AddMSTestPackages(currentDTEProject);
+                            //AddMSTestPackages(currentDTEProject);
                             //RemoveNUnitPackages(currentDTEProject);
                         }
                     }
