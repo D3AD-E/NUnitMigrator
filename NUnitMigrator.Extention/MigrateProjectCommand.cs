@@ -166,7 +166,7 @@ namespace NUnitMigrator.Extention
                                 OutputMessage("Changes not saved");
                             }
 
-                            //AddMSTestPackages(currentDTEProject);
+                            AddMSTestPackages(currentDTEProject);
                             //RemoveNUnitPackages(currentDTEProject);
                         }
                     }

@@ -405,7 +405,6 @@ namespace NUnitMigrator.Core.RewriterLogic
 
         public override SyntaxNode VisitInvocationExpression(InvocationExpressionSyntax node)
         {
-
             SymbolInfo info;
             try
             {
