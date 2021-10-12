@@ -23,6 +23,8 @@ namespace NUnitMigrator.App.Logic
             Console.WriteLine($"Using MSBuild at '{instance.MSBuildPath}'.");
 
             MSBuildLocator.RegisterInstance(instance);
+            int errorsSum = 0;
+            int changesSum = 0;
             using (var workspace = MSBuildWorkspace.Create())
             {
                 workspace.WorkspaceFailed += (o, e) => Console.WriteLine(e.Diagnostic.Message);
@@ -33,11 +35,16 @@ namespace NUnitMigrator.App.Logic
                 foreach (var projectId in solution.ProjectIds)
                 {
                     var project = solution.GetProject(projectId);
+                    Console.WriteLine($"Project.Name: {project.Name}");
                     Console.WriteLine($"Project.CompilationOptions.Platform: {project.CompilationOptions.Platform}");
                     Console.WriteLine($"Project.CompilationOptions.Language: {project.CompilationOptions.Language}");
                     Console.WriteLine($"Project.CompilationOptions.OptimizationLevel: {project.CompilationOptions.OptimizationLevel}");
                     Console.WriteLine($"Project.CompilationOptions.WarningLevel: {project.CompilationOptions.WarningLevel}");
                     Console.WriteLine($"Project.CompilationOptions.OutputKind: {project.CompilationOptions.OutputKind}");
+
+                    if (!project.Name.Equals("nunit.framework.tests(net46)"))
+                        continue;
+
                     foreach (var documentId in project.DocumentIds)
                     {
                         Document document = project.GetDocument(documentId);
@@ -60,7 +67,8 @@ namespace NUnitMigrator.App.Logic
 
                         if (rewriter.Unsupported.Count > 0)
                         {
-                            WriteLineInColor($"{rewriter.Unsupported.Count} errors encountered", ConsoleColor.Red);
+                            errorsSum += rewriter.Unsupported.Count;
+                            WriteLineInColor($"{rewriter.Unsupported.Count} unsupported nodes encountered", ConsoleColor.Red);
 
                             foreach (var unsupprotedNode in rewriter.Unsupported)
                             {
@@ -71,12 +79,16 @@ namespace NUnitMigrator.App.Logic
                         }
                         else
                         {
+                            changesSum += rewriter.ChangesAmount;
+                            WriteLineInColor($"Total {rewriter.ChangesAmount} changes made", ConsoleColor.Green);
                             WriteLineInColor("Processed", ConsoleColor.Green);
                         }
 
                     }
                 }
                 Console.WriteLine($"Changed {documentCount} documents");
+                WriteLineInColor($"Total {errorsSum} unsupported nodes encountered", ConsoleColor.Red);
+                WriteLineInColor($"Total {changesSum} changes made", ConsoleColor.Green);
                 var applyResult = workspace.TryApplyChanges(solution);
                 if (applyResult)
                     WriteLineInColor("Successfully applied changes", ConsoleColor.Green);
@@ -88,7 +100,7 @@ namespace NUnitMigrator.App.Logic
         private static bool IsNUnitTestFile(SyntaxNode root)
         {
             foreach (var usingDirective in root.DescendantNodes().OfType<UsingDirectiveSyntax>().ToList())
-                if (usingDirective.ToString().Equals("using NUnit.Framework;"))
+                if (usingDirective.ToString().StartsWith("using NUnit.Framework"))
                     return true;
             return false;
         }

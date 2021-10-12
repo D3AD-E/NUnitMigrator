@@ -12,8 +12,7 @@ namespace NUnitMigrator.Core.RewriterLogic
 {
     internal class MSTestSyntaxFactory
     {
-        public static InvocationExpressionSyntax ThrowsExceptionSyntax(
-            ExpressionSyntax expression,
+        public static InvocationExpressionSyntax ThrowsExceptionSyntax(ExpressionSyntax expression,
             ExceptionSyntaxData details,
             SeparatedSyntaxList<ArgumentSyntax>? additionalArguments = null)
         {
@@ -30,8 +29,7 @@ namespace NUnitMigrator.Core.RewriterLogic
             return ThrowsExceptionWithMatch(expression, details, additionalArguments);
         }
 
-        public static InvocationExpressionSyntax ThrowsExceptionNaked(
-            ExpressionSyntax expression,
+        public static InvocationExpressionSyntax ThrowsExceptionNaked(ExpressionSyntax expression,
             ExceptionSyntaxData details,
             SeparatedSyntaxList<ArgumentSyntax>? additionalArguments = null)
         {
@@ -52,7 +50,7 @@ namespace NUnitMigrator.Core.RewriterLogic
                                     SyntaxFactory.SingletonSeparatedList<TypeSyntax>(
                                         SyntaxFactory.IdentifierName(details.TypeName))))))
                 .WithArgumentList(
-                    BuildArgumentList(expression, additionalArguments));
+                    CreateArgumentList(expression, additionalArguments));
         }
 
 
@@ -65,8 +63,7 @@ namespace NUnitMigrator.Core.RewriterLogic
                     SyntaxFactory.IdentifierName(method)));
         }
 
-        public static InvocationExpressionSyntax ThrowsExceptionWithMatch(
-            ExpressionSyntax expression, ExceptionSyntaxData details,
+        public static InvocationExpressionSyntax ThrowsExceptionWithMatch(ExpressionSyntax expression, ExceptionSyntaxData details,
             SeparatedSyntaxList<ArgumentSyntax>? additionalArguments = null)
         {
             string type = "StringAssert";
@@ -120,8 +117,7 @@ namespace NUnitMigrator.Core.RewriterLogic
                 .WithArgumentList(SyntaxFactory.ArgumentList(argumentList));
         }
 
-        private static ArgumentListSyntax BuildArgumentList(
-            ExpressionSyntax expression,
+        private static ArgumentListSyntax CreateArgumentList(ExpressionSyntax expression,
             SeparatedSyntaxList<ArgumentSyntax>? additionalArguments)
         {
             if (expression == null)

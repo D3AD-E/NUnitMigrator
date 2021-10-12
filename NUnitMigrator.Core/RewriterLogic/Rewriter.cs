@@ -10,10 +10,12 @@ namespace NUnitMigrator.Core.RewriterLogic
     public class Rewriter : CSharpSyntaxRewriter
     {
         public readonly List<UnsupportedNodeInfo> Unsupported;
+        public int ChangesAmount;
         private readonly SemanticModel _semanticModel;
 
         private readonly MethodState _methodState;
         private readonly ClassState _classState;
+        
 
         public Rewriter(SemanticModel model) : base()
         {
@@ -21,6 +23,7 @@ namespace NUnitMigrator.Core.RewriterLogic
             _methodState = new MethodState();
             _classState = new ClassState();
             Unsupported = new List<UnsupportedNodeInfo>();
+            ChangesAmount = 0;
         }
 
         public override SyntaxNode VisitClassDeclaration(ClassDeclarationSyntax node)
@@ -35,6 +38,7 @@ namespace NUnitMigrator.Core.RewriterLogic
                     {
                         node = node.RemoveAttribute(attribute, true);
                     }
+                    ChangesAmount++;
                 }
             }
             return node;
@@ -66,26 +70,27 @@ namespace NUnitMigrator.Core.RewriterLogic
                 if (_methodState.ValuesRangeState.IsPropertyNeeded)
                     node = node.AddParametrization(_methodState.ValuesRangeState.Attributes);
             }
-
-
             return node;
         }
 
         public override SyntaxNode VisitAttribute(AttributeSyntax attribute)
         {
             attribute = (AttributeSyntax)base.VisitAttribute(attribute);
-            return HandleAttribute(attribute);
+            var prevAttribute = attribute;
+            attribute = HandleAttribute(attribute);
+            if(prevAttribute != attribute)
+                ChangesAmount++;
+            return attribute;
         }
        
-        private SyntaxNode HandleAttribute(AttributeSyntax attribute)
+        private AttributeSyntax HandleAttribute(AttributeSyntax attribute)
         {
             var name = attribute.Name.ToString();
             switch (name)
             {
                 case RewriterData.NUnitData.TEST_FIXTURE_ATTRIBUTE:
-                    if (attribute.ArgumentList != null && attribute.ArgumentList.Arguments.Count > 0)
-                        throw new NotImplementedException();
-                    attribute = attribute.WithName(SyntaxFactory.IdentifierName(RewriterData.MSTestData.TEST_CLASS_ATTRIBUTE));
+                    if (attribute.ArgumentList == null || attribute.ArgumentList.Arguments.Count == 0)
+                        attribute = attribute.WithName(SyntaxFactory.IdentifierName(RewriterData.MSTestData.TEST_CLASS_ATTRIBUTE));
                     break;
                 case RewriterData.NUnitData.NON_PARALLELIZABLE_ATTRIBUTE:
                     attribute = attribute.WithName(SyntaxFactory.IdentifierName(RewriterData.MSTestData.DO_NOT_PARRELELIZE_ATTRIBUTE));
@@ -414,10 +419,12 @@ namespace NUnitMigrator.Core.RewriterLogic
             {
                 return base.VisitInvocationExpression(node);
             }
-
+            var prevNode = node;
             node = HandleInvocationExpression(node, info);
+            if (prevNode != node)
+                ChangesAmount++;
             node = base.VisitInvocationExpression(node) as InvocationExpressionSyntax;
-
+            
             return node;
         }
 
@@ -504,7 +511,8 @@ namespace NUnitMigrator.Core.RewriterLogic
                     }
                 }
                 else if ("Pass".Equals(memberName) || "Fail".Equals(memberName) || "Ignore".Equals(memberName) || "Inconclusive".Equals(memberName)
-                    || "AreEqual".Equals(memberName) || "AreNotEqual".Equals(memberName) || "AreSame".Equals(memberName) || "AreNotSame".Equals(memberName))
+                    || "AreEqual".Equals(memberName) || "AreNotEqual".Equals(memberName) || "AreSame".Equals(memberName) || "AreNotSame".Equals(memberName)
+                    || "IsTrue".Equals(memberName)||"IsFalse".Equals(memberName))
                 {
                     //ignored
                     return node;
@@ -581,7 +589,7 @@ namespace NUnitMigrator.Core.RewriterLogic
                 {
                     Unsupported.Add(new UnsupportedNodeInfo
                     {
-                        Info = "Unsupported assertion expression",
+                        Info = "Unsupported generic assertion expression",
                         Location = node.GetLocation(),
                         NodeName = node.ToString()
                     });
@@ -611,7 +619,7 @@ namespace NUnitMigrator.Core.RewriterLogic
                 {
                     Unsupported.Add(new UnsupportedNodeInfo
                     {
-                        Info = "Unsupported collection assert expression",
+                        Info = "Unsupported collection assertion expression",
                         Location = node.GetLocation(),
                         NodeName = node.ToString()
                     });
@@ -634,7 +642,7 @@ namespace NUnitMigrator.Core.RewriterLogic
                 {
                     Unsupported.Add(new UnsupportedNodeInfo
                     {
-                        Info = "Unsupported string assert expression",
+                        Info = "Unsupported string assertion expression",
                         Location = node.GetLocation(),
                         NodeName = node.ToString()
                     });
@@ -656,7 +664,7 @@ namespace NUnitMigrator.Core.RewriterLogic
                 {
                     Unsupported.Add(new UnsupportedNodeInfo
                     {
-                        Info = "Unsupported directory assert expression",
+                        Info = "Unsupported directory assertion expression",
                         Location = node.GetLocation(),
                         NodeName = node.ToString()
                     });
@@ -678,17 +686,17 @@ namespace NUnitMigrator.Core.RewriterLogic
                 {
                     Unsupported.Add(new UnsupportedNodeInfo
                     {
-                        Info = "Unsupported directory assert expression",
+                        Info = "Unsupported directory assertion expression",
                         Location = node.GetLocation(),
                         NodeName = node.ToString()
                     });
                 }
             }
-            else if(frameworkInfo?.StartsWith("NUnit.") ?? false)
+            else if(frameworkInfo?.StartsWith("NUnit.Framework") ?? false)
             {
                 Unsupported.Add(new UnsupportedNodeInfo
                 {
-                    Info = "Unsupported assert expression",
+                    Info = "Unsupported assertion expression",
                     Location = node.GetLocation(),
                     NodeName = node.ToString()
                 });

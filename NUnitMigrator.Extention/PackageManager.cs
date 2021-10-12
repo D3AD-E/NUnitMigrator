@@ -27,16 +27,6 @@ namespace NUnitMigrator.Extention
         }
 
         public PackageManager(EnvDTE.Project project, IVsPackageInstallerServices packageServices, IVsPackageInstaller installer,
-             IVsPackageInstallerEvents events)
-            : this(project, packageServices, installer, events, null)
-        {
-            _project = project;
-            _packageServices = packageServices;
-            _installer = installer;
-            _events = events;
-        }
-
-        public PackageManager(EnvDTE.Project project, IVsPackageInstallerServices packageServices, IVsPackageInstaller installer,
             IVsPackageInstallerEvents events, IVsOutputWindowPane outputWindowPane)
         {
             _project = project ?? throw new ArgumentNullException(nameof(project));
@@ -49,35 +39,19 @@ namespace NUnitMigrator.Extention
             {
                 _events.PackageInstalling += OnEventsOnPackageInstalling;
                 _events.PackageInstalled += OnEventsOnPackageInstalled;
-                _events.PackageUninstalling += OnEventsOnPackageUninstalling;
-                _events.PackageUninstalled += OnEventsOnPackageUninstalled;
             }
-        }
-
-        public Action<string> ReportWarning { get; set; }
-
-        private void OnEventsOnPackageUninstalled(IVsPackageMetadata m)
-        {
-            ThreadHelper.ThrowIfNotOnUIThread();
-            _outputWindowPane.OutputStringThreadSafe($"Uninstalled package {m.Id}, version {m.VersionString}.");
-        }
-
-        private void OnEventsOnPackageUninstalling(IVsPackageMetadata m)
-        {
-            ThreadHelper.ThrowIfNotOnUIThread();
-            _outputWindowPane.OutputStringThreadSafe($"Uninstalling package {m.Id}, version {m.VersionString}.");
         }
 
         private void OnEventsOnPackageInstalled(IVsPackageMetadata m)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-            _outputWindowPane.OutputStringThreadSafe($"Installed package {m.Id}, version {m.VersionString}.");
+            _outputWindowPane.OutputStringThreadSafe($"Installed package {m.Id}, version {m.VersionString}\n");
         }
 
         private void OnEventsOnPackageInstalling(IVsPackageMetadata m)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-            _outputWindowPane.OutputStringThreadSafe($"Installing package {m.Id}, version {m.VersionString}.");
+            _outputWindowPane.OutputStringThreadSafe($"Installing package {m.Id}, version {m.VersionString}\n");
         }
 
         public bool AddPackage(string packageId, string version = null, string source = null)
@@ -91,10 +65,6 @@ namespace NUnitMigrator.Extention
             return true;
         }
 
-        internal void RemovePackage(string packageId)
-        {
-            throw new NotImplementedException();
-        }
 
         public void Dispose()
         {
@@ -104,8 +74,6 @@ namespace NUnitMigrator.Extention
                 {
                     _events.PackageInstalling -= OnEventsOnPackageInstalling;
                     _events.PackageInstalled -= OnEventsOnPackageInstalled;
-                    _events.PackageUninstalling -= OnEventsOnPackageUninstalling;
-                    _events.PackageUninstalled -= OnEventsOnPackageUninstalled;
                 }
                 _disposed = true;
             }

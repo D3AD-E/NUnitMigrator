@@ -56,7 +56,7 @@ namespace NUnitMigrator.Extention
         private void OutputMessage(string text)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-            _outputWindowPane.OutputString(text);
+            _outputWindowPane.OutputString(text + Environment.NewLine);
         }
         /// <summary>
         /// Gets the instance of the command.
@@ -155,7 +155,8 @@ namespace NUnitMigrator.Extention
                             var newDocument = document.WithSyntaxRoot(result);
                             project = newDocument.Project;
                             newSolution = project.Solution;
-
+                            OutputMessage($"Made {rewriter.ChangesAmount} changes");
+                            OutputMessage($"Got {rewriter.Unsupported.Count} unsupported nodes");
                             ShowUnsupported(rewriter.Unsupported);
                         }
 
@@ -163,11 +164,10 @@ namespace NUnitMigrator.Extention
                         {
                             if (!workspace.TryApplyChanges(newSolution))
                             {
-                                OutputMessage("Changes not saved");
+                                OutputMessage("Changes were not saved");
                             }
 
                             AddMSTestPackages(currentDTEProject);
-                            //RemoveNUnitPackages(currentDTEProject);
                         }
                     }
                 }
@@ -232,18 +232,7 @@ namespace NUnitMigrator.Extention
             }
         }
 
-        private void RemoveNUnitPackages(DTEProject selectedProject)
-        {
-            OutputMessage("Removing NUnit packages");
-            using (var packageInstaller = PackageManager.Setup(selectedProject, _outputWindowPane))
-            {
-                foreach (var package in ExtentionData.NUnitPackages)
-                {
-                    packageInstaller.RemovePackage(package.Trim());
-                }
-            }
-        }
-
+        
         private static IEnumerable<DocumentId> GetSupportedDocumentIds(Project project)
         {
             return project.Documents

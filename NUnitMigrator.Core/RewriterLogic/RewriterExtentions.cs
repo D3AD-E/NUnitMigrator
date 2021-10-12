@@ -155,9 +155,8 @@ namespace NUnitMigrator.Core.RewriterLogic
                 if (attributeValues == null && pa.Name.ToString().Equals(RewriterData.NUnitData.VALUES_ATTRIBUTE))
                     attributeValues = pa;
             }
-            if (attributeValues != null)
+            if (attributeValues != null && attributeValues.ArgumentList!=null)
             {
-
                 for (int i = 0; i < attributeValues.ArgumentList.Arguments.Count(); i++)
                 {
                     SeparatedSyntaxList<AttributeSyntax> attributes = new SeparatedSyntaxList<AttributeSyntax>();
@@ -171,7 +170,7 @@ namespace NUnitMigrator.Core.RewriterLogic
                             {
                                 attributeArguments = attributeArguments.Add(SyntaxFactory.AttributeArgument(SyntaxFactory.ParseExpression(attr.ArgumentList.Arguments.ElementAt(i).ToFullString())));
                             }
-                            catch (InvalidCastException ex)
+                            catch (Exception ex)
                             {
 
                             }
