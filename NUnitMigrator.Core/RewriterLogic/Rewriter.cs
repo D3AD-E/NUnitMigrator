@@ -589,6 +589,14 @@ namespace NUnitMigrator.Core.RewriterLogic
                 {
                     node = TransformNaNExpression(node, memberAccess);
                 }
+                else if("IsAssignableFrom".Equals(memberName))
+                {
+                    node = TransformAssignableExpression(node, memberAccess, false);
+                }
+                else if ("IsNotAssignableFrom".Equals(memberName))
+                {
+                    node = TransformAssignableExpression(node, memberAccess, true);
+                }
                 else
                 {
                     Unsupported.Add(new UnsupportedNodeInfo
@@ -606,7 +614,7 @@ namespace NUnitMigrator.Core.RewriterLogic
                 if ("AllItemsAreInstancesOfType".Equals(memberName) || "AllItemsAreNotNull".Equals(memberName) || "AllItemsAreUnique".Equals(memberName)
                     || "AreEqual".Equals(memberName) || "AreEquivalent".Equals(memberName) || "AreNotEqual".Equals(memberName)
                     || "AreNotEquivalent".Equals(memberName) || "DoesNotContain".Equals(memberName)
-                    || "IsSubsetOf".Equals(memberName) || "IsNotSubsetOf".Equals(memberName))
+                    || "IsSubsetOf".Equals(memberName) || "IsNotSubsetOf".Equals(memberName) || "Contains".Equals(memberName))
                 {
                     //ignored
                     return node;
@@ -704,6 +712,37 @@ namespace NUnitMigrator.Core.RewriterLogic
                     Location = node.GetLocation(),
                     NodeName = node.ToString()
                 });
+            }
+
+            return node;
+        }
+
+        private InvocationExpressionSyntax TransformAssignableExpression(InvocationExpressionSyntax node, MemberAccessExpressionSyntax memberAccess, bool hasNot)
+        {
+            if (node.ArgumentList == null || node.ArgumentList.Arguments.Count < 1)
+            {
+                Unsupported.Add(new UnsupportedNodeInfo
+                {
+                    Info = "Unsupported invocation expression",
+                    Location = node.GetLocation(),
+                    NodeName = node.ToString()
+                });
+                return node;
+            }
+
+            var arg0 = node.ArgumentList.Arguments[0];
+            var name = hasNot ? "IsFalse" : "IsTrue";
+            if (memberAccess.Name is GenericNameSyntax genericNameSyntax && genericNameSyntax.TypeArgumentList.Arguments.Count == 1)//arg0.gettype().isassignablefrom(generic)
+            {
+                var expression = SyntaxFactory.TypeOfExpression(genericNameSyntax.TypeArgumentList.Arguments[0]);
+                var invocation = MSTestSyntaxFactory.CreateInvocation(arg0.Expression, "GetType().IsAssignableFrom", SyntaxFactory.Argument(expression));
+                node = TransformSimpleAssertWithArguments(node, memberAccess, name, 1, SyntaxFactory.Argument(invocation));
+            }
+            else if (node.ArgumentList.Arguments.Count >= 2)//arg1.gettype().isassignablefrom(arg0)
+            {
+                var arg1 = node.ArgumentList.Arguments[1];
+                var invocation = MSTestSyntaxFactory.CreateInvocation(arg1.Expression, "GetType().IsAssignableFrom", SyntaxFactory.Argument(arg0.Expression));
+                node = TransformSimpleAssertWithArguments(node, memberAccess, name, 2, SyntaxFactory.Argument(invocation));
             }
 
             return node;
