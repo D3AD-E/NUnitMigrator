@@ -646,6 +646,33 @@ namespace NUnitMigrator.Core.RewriterLogic
                     //ignored
                     return node;
                 }
+                else if("DoesNotContain".Equals(memberName))
+                {
+                    node = TransformContainConstraintOrExpression(node, stringMemberAccess, true);
+                    node = node.ChangeName("Assert");
+                }
+                else if("DoesNotStartsWith".Equals(memberName))
+                {
+                    node = TransformGenericStringAssertion(node, stringMemberAccess, "StartsWith", true);
+                    node = node.ChangeName("Assert");
+                }
+                else if ("DoesNotEndWith".Equals(memberName))
+                {
+                    node = TransformGenericStringAssertion(node, stringMemberAccess, "EndsWith", true);
+                    node = node.ChangeName("Assert");
+                }
+                else if ("AreEqualIgnoringCase".Equals(memberName))
+                {
+                    node = TransformGenericStringAssertion(node, stringMemberAccess, "Equals", 
+                        false, SyntaxFactory.Argument(SyntaxFactory.IdentifierName("StringComparison.OrdinalIgnoreCase")));
+                    node = node.ChangeName("Assert");
+                }
+                else if ("AreNotEqualIgnoringCase".Equals(memberName))
+                {
+                    node = TransformGenericStringAssertion(node, stringMemberAccess, "Equals", 
+                        true, SyntaxFactory.Argument(SyntaxFactory.IdentifierName("StringComparison.OrdinalIgnoreCase")));
+                    node = node.ChangeName("Assert");
+                }
                 else if("IsMatch".Equals(memberName))
                 {
                     node = TransformIsMatchExpression(node, stringMemberAccess);
@@ -948,7 +975,7 @@ namespace NUnitMigrator.Core.RewriterLogic
             {
                 Unsupported.Add(new UnsupportedNodeInfo
                 {
-                    Info = "Unsupported ContainsKey arguments",
+                    Info = "Unsupported ContainsValue arguments",
                     Location = node.GetLocation(),
                     NodeName = node.ToString()
                 });
@@ -1256,6 +1283,19 @@ namespace NUnitMigrator.Core.RewriterLogic
             return node;
         }
 
+        private InvocationExpressionSyntax TransformGenericStringAssertion(InvocationExpressionSyntax node,
+            MemberAccessExpressionSyntax memberAccess, string invocationName, bool hasNot, params ArgumentSyntax[] arguments)
+        {
+            var arg0 = node.ArgumentList.Arguments[0];
+            var arg1 = node.ArgumentList.Arguments[0];
+            var invocation = MSTestSyntaxFactory.CreateInvocation(arg0.Expression, invocationName, arg1);
+
+            var newArg = SyntaxFactory.Argument(invocation);
+            var nodeName = hasNot ? "IsFalse" : "IsTrue";
+            node = TransformSimpleAssertWithArguments(node, memberAccess, nodeName, 2, newArg);
+            return node;
+        }
+
         private InvocationExpressionSyntax TransformRegexConstraint(InvocationExpressionSyntax node, MemberAccessExpressionSyntax memberAccess)
         {
             var arg0 = node.ArgumentList.Arguments[0];
@@ -1282,8 +1322,6 @@ namespace NUnitMigrator.Core.RewriterLogic
             node = node.ChangeName("StringAssert");
             return node;
         }
-
-
 
         private InvocationExpressionSyntax TransformTypeOfConstraint(InvocationExpressionSyntax node, MemberAccessExpressionSyntax memberAccess,
             MemberAccessExpressionSyntax constraintMemberAccess)
