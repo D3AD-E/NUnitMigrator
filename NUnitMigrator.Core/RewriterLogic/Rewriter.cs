@@ -1524,20 +1524,21 @@ namespace NUnitMigrator.Core.RewriterLogic
             }
             var arg = node.ArgumentList.Arguments[0];
             var type = _semanticModel.GetTypeInfo(arg.Expression);
-
-            if (type.ConvertedType?.SpecialType != SpecialType.System_String)
+            ArgumentSyntax resultArgument;
+            if (type.ConvertedType?.SpecialType == SpecialType.System_String)
             {
-                Unsupported.Add(new UnsupportedNodeInfo
-                {
-                    Info = "Unsupported arguments in invocation expression",
-                    Location = node.GetLocation(),
-                    NodeName = node.ToString()
-                });
-                return node;
+                resultArgument = SyntaxFactory.Argument(MSTestSyntaxFactory.CreateInvocation("string", "IsNullOrEmpty", arg));
             }
-            var invocation = MSTestSyntaxFactory.CreateInvocation("string", "IsNullOrEmpty", arg);
+            else
+            {
+                var isEmptyExpression = SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression,
+                    arg.Expression, SyntaxFactory.IdentifierName("Count"));
+
+                var binaryExpression = SyntaxFactory.BinaryExpression(SyntaxKind.EqualsExpression, isEmptyExpression, SyntaxFactory.ParseExpression("0"));
+                resultArgument = SyntaxFactory.Argument(binaryExpression);
+            }
             var nodeName = hasNot ? "IsFalse" : "IsTrue";
-            node = TransformSimpleAssertWithArguments(node, memberAccess, nodeName, 1, SyntaxFactory.Argument(invocation));
+            node = TransformSimpleAssertWithArguments(node, memberAccess, nodeName, 1, resultArgument);
 
             return node;
         }
