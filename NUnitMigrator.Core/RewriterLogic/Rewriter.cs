@@ -532,6 +532,10 @@ namespace NUnitMigrator.Core.RewriterLogic
                     memberAccess = memberAccess.WithName(SyntaxFactory.IdentifierName("IsNotNull"));
                     node = node.WithExpression(memberAccess);
                 }
+                else if("Contains".Equals(memberName))
+                {
+                    node = TransformContainConstraintOrExpression(node, memberAccess, false);
+                }
                 else if ("True".Equals(memberName))
                 {
                     memberAccess = memberAccess.WithName(SyntaxFactory.IdentifierName("IsTrue"));
@@ -601,7 +605,7 @@ namespace NUnitMigrator.Core.RewriterLogic
                 var memberName = collectionMemberAccess.Name?.ToString();
                 if ("AllItemsAreInstancesOfType".Equals(memberName) || "AllItemsAreNotNull".Equals(memberName) || "AllItemsAreUnique".Equals(memberName)
                     || "AreEqual".Equals(memberName) || "AreEquivalent".Equals(memberName) || "AreNotEqual".Equals(memberName)
-                    || "AreNotEquivalent".Equals(memberName) || "Contains".Equals(memberName) || "DoesNotContain".Equals(memberName)
+                    || "AreNotEquivalent".Equals(memberName) || "DoesNotContain".Equals(memberName)
                     || "IsSubsetOf".Equals(memberName) || "IsNotSubsetOf".Equals(memberName))
                 {
                     //ignored
@@ -958,7 +962,7 @@ namespace NUnitMigrator.Core.RewriterLogic
             }
             else if ("Contain".Equals(constraintName))
             {
-                node = TransformContainConstraint(node, memberAccess, hasNot);
+                node = TransformContainConstraintOrExpression(node, memberAccess, hasNot);
             }
             return node;
         }
@@ -1156,7 +1160,7 @@ namespace NUnitMigrator.Core.RewriterLogic
             }
             else if ("Contain".Equals(constraintName))
             {
-                node = TransformContainConstraint(node, memberAccess, hasNot);
+                node = TransformContainConstraintOrExpression(node, memberAccess, hasNot);
                 hasChanged = true;
                 return node;
             }
@@ -1186,28 +1190,17 @@ namespace NUnitMigrator.Core.RewriterLogic
             return node;
         }
 
-        private InvocationExpressionSyntax TransformContainConstraint(InvocationExpressionSyntax node, 
+        private InvocationExpressionSyntax TransformContainConstraintOrExpression(InvocationExpressionSyntax node, 
             MemberAccessExpressionSyntax memberAccess, bool hasNot)
         {
             var arg0 = node.ArgumentList.Arguments[0];
             var arg1 = node.ArgumentList.Arguments[1];
-
-            if (arg1.Expression is InvocationExpressionSyntax invocationExpression)
-            {
-                var invocation = MSTestSyntaxFactory.CreateInvocation(arg0.Expression, "Contains", invocationExpression.ArgumentList.Arguments[0]);
-                var newArg = SyntaxFactory.Argument(invocation);
-                var nodeName = hasNot ? "IsFalse" : "IsTrue";
-                node = TransformSimpleAssertWithArguments(node, memberAccess, nodeName, 2, newArg);
-            }
-            else
-            {
-                Unsupported.Add(new UnsupportedNodeInfo
-                {
-                    Info = "Incorrect Does.Contain arguments",
-                    Location = node.GetLocation(),
-                    NodeName = node.ToString()
-                });
-            }
+            var invocation = arg1.Expression is InvocationExpressionSyntax invocationExpression ? 
+                MSTestSyntaxFactory.CreateInvocation(arg0.Expression, "Contains", invocationExpression.ArgumentList.Arguments[0]) 
+                : MSTestSyntaxFactory.CreateInvocation(arg0.Expression, "Contains", arg1);
+            var newArg = SyntaxFactory.Argument(invocation);
+            var nodeName = hasNot ? "IsFalse" : "IsTrue";
+            node = TransformSimpleAssertWithArguments(node, memberAccess, nodeName, 2, newArg);
 
             return node;
         }
