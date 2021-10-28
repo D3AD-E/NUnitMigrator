@@ -281,6 +281,34 @@ public class A
         }
 
         [TestMethod]
+        public void TestThrows()
+        {
+            const string input = @"
+using NUnit.Framework;
+public class A
+{ 
+    void B() { throw new OutOfMemoryException(); }
+    void Test()
+    {
+        Assert.Throws(typeof(OutOfMemoryException), B);
+    }
+}";
+            const string expected = @"
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+public class A
+{ 
+    void B() { throw new OutOfMemoryException(); }
+    void Test()
+    {
+        Assert.ThrowsException<OutOfMemoryException>(B);
+    }
+}";
+            var actual = TestSupport.RunTest(input);
+            Assert.AreEqual(expected, actual.Text);
+            Assert.IsTrue(actual.Errors.Count == 0);
+        }
+
+        [TestMethod]
         public void TestComment()
         {
             const string input = @"

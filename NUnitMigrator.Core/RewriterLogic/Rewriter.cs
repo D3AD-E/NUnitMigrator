@@ -519,8 +519,11 @@ namespace NUnitMigrator.Core.RewriterLogic
                 }
                 else if ("Throws".Equals(memberName))
                 {
-                    memberAccess = memberAccess.WithName(SyntaxFactory.IdentifierName("ThrowsException"));
-                    node = node.WithExpression(memberAccess);
+                    node = TransformThrowsAssertion(node, memberAccess, false);
+                }
+                else if("ThrowsAsync".Equals(memberName))
+                {
+                    node = TransformThrowsAssertion(node, memberAccess, true);
                 }
                 else if ("Null".Equals(memberName))
                 {
@@ -675,7 +678,11 @@ namespace NUnitMigrator.Core.RewriterLogic
                 }
                 else if("IsMatch".Equals(memberName))
                 {
-                    node = TransformIsMatchExpression(node, stringMemberAccess);
+                    node = TransformIsMatchExpression(node, stringMemberAccess, false);
+                }
+                else if ("DoesNotMatch".Equals(memberName))
+                {
+                    node = TransformIsMatchExpression(node, stringMemberAccess, true);
                 }
                 else
                 {
@@ -744,7 +751,40 @@ namespace NUnitMigrator.Core.RewriterLogic
             return node;
         }
 
-        private InvocationExpressionSyntax TransformAssignableExpression(InvocationExpressionSyntax node, MemberAccessExpressionSyntax memberAccess, bool hasNot)
+        private InvocationExpressionSyntax TransformThrowsAssertion(InvocationExpressionSyntax node,
+            MemberAccessExpressionSyntax memberAccess, bool isAsync)
+        {
+            string name = isAsync ? "ThrowsExceptionAsync" : "ThrowsException";
+            if (memberAccess.Name is GenericNameSyntax)
+            {
+                memberAccess = memberAccess.WithName(SyntaxFactory.IdentifierName(name));
+                node = node.WithExpression(memberAccess);
+                return node;
+            }
+            var arg0 = node.ArgumentList.Arguments[0];
+            var arg1 = node.ArgumentList.Arguments[1];
+
+            if(arg0.Expression is TypeOfExpressionSyntax typeExpression)
+            {
+                var type = typeExpression.Type;
+                var list = new SeparatedSyntaxList<TypeSyntax>();
+                list = list.Add(type);
+
+                memberAccess = memberAccess.WithName(SyntaxFactory.GenericName(name)
+                    .WithTypeArgumentList(SyntaxFactory.TypeArgumentList(list)));
+
+                var argList = new SeparatedSyntaxList<ArgumentSyntax>();
+                argList = argList.Add(arg1);
+
+                node = node.WithExpression(memberAccess).WithArgumentList(
+                    SyntaxFactory.ArgumentList(argList).NormalizeWhitespace());
+
+            }
+            return node;
+        }
+
+        private InvocationExpressionSyntax TransformAssignableExpression(InvocationExpressionSyntax node, 
+            MemberAccessExpressionSyntax memberAccess, bool hasNot)
         {
             if (node.ArgumentList == null || node.ArgumentList.Arguments.Count < 1)
             {
@@ -775,14 +815,16 @@ namespace NUnitMigrator.Core.RewriterLogic
             return node;
         }
 
-        private InvocationExpressionSyntax TransformIsMatchExpression(InvocationExpressionSyntax node, MemberAccessExpressionSyntax memberAccess)
+        private InvocationExpressionSyntax TransformIsMatchExpression(InvocationExpressionSyntax node, 
+            MemberAccessExpressionSyntax memberAccess, bool hasNot)
         {
             var arg0 = node.ArgumentList.Arguments[0];
             var arg1 = node.ArgumentList.Arguments[1];
 
             var matchTypeArgument = SyntaxFactory.Argument(MSTestSyntaxFactory.CreateObjectInstance(typeof(System.Text.RegularExpressions.Regex).FullName,
-                            arg1)).NormalizeWhitespace();
-            node = TransformSimpleAssertWithArguments(node, memberAccess, "Matches", 2, arg0, matchTypeArgument);
+                            arg0)).NormalizeWhitespace();
+            string name = hasNot ? "DoesNotMatch" : "Matches";
+            node = TransformSimpleAssertWithArguments(node, memberAccess, name, 2, arg1, matchTypeArgument);
             return node;
         }
 
