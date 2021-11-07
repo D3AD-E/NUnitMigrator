@@ -281,6 +281,38 @@ public class A
         }
 
         [TestMethod]
+        public void TestIsAssignableFrom()
+        {
+            const string input = @"
+using NUnit.Framework;
+public class A
+{ 
+    void Test()
+    {
+        int a = 0;
+        Assert.IsAssignableFrom(typeof(int), a);
+        Assert.IsAssignableFrom<int>(a);
+        Assert.IsNotAssignableFrom<int>(a);
+    }
+}";
+            const string expected = @"
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+public class A
+{ 
+    void Test()
+    {
+        int a = 0;
+        Assert.IsTrue(a.GetType().IsAssignableFrom(typeof(int)));
+        Assert.IsTrue(a.GetType().IsAssignableFrom(typeof(int)));
+        Assert.IsFalse(a.GetType().IsAssignableFrom(typeof(int)));
+    }
+}";
+            var actual = TestSupport.RunTest(input);
+            Assert.AreEqual(expected, actual.Text);
+            Assert.IsTrue(actual.Errors.Count == 0);
+        }
+
+        [TestMethod]
         public void TestThrows()
         {
             const string input = @"

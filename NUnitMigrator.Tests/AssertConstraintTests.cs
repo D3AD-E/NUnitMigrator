@@ -93,6 +93,39 @@ public class A
             Assert.AreEqual(expected, actual.Text);
             Assert.IsTrue(actual.Errors.Count == 0);
         }
+
+        [TestMethod]
+        public void TestAssignableFrom()
+        {
+            const string input = @"
+using NUnit.Framework;
+public class A
+{ 
+    void Test()
+    {
+        int a = 0;
+        Assert.That(a, Is.AssignableFrom(typeof(int));
+        Assert.That(a, Is.AssignableFrom<int>());
+        Assert.That(a, Is.Not.AssignableFrom(typeof(int));
+    }
+}";
+            const string expected = @"
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+public class A
+{ 
+    void Test()
+    {
+        int a = 0;
+        Assert.IsTrue(a.GetType().IsAssignableFrom(typeof(int)));
+        Assert.IsTrue(a.GetType().IsAssignableFrom(typeof(int)));
+        Assert.IsFalse(a.GetType().IsAssignableFrom(typeof(int)));
+    }
+}";
+            var actual = TestSupport.RunTest(input);
+            Assert.AreEqual(expected, actual.Text);
+            Assert.IsTrue(actual.Errors.Count == 0);
+        }
+
         [TestMethod]
         public void TestDoesExistDirectoryInfo()
         {

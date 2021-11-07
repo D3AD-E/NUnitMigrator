@@ -592,13 +592,13 @@ namespace NUnitMigrator.Core.RewriterLogic
                 {
                     node = TransformNaNExpression(node, memberAccess);
                 }
-                else if("IsAssignableFrom".Equals(memberName))
+                else if("IsAssignableFrom".Equals(memberAccess.Name?.Identifier.ToString()))
                 {
-                    node = TransformAssignableExpression(node, memberAccess, false);
+                    node = TransformAssignableFromExpression(node, memberAccess, false);
                 }
-                else if ("IsNotAssignableFrom".Equals(memberName))
+                else if ("IsNotAssignableFrom".Equals(memberAccess.Name?.Identifier.ToString()))
                 {
-                    node = TransformAssignableExpression(node, memberAccess, true);
+                    node = TransformAssignableFromExpression(node, memberAccess, true);
                 }
                 else
                 {
@@ -793,7 +793,7 @@ namespace NUnitMigrator.Core.RewriterLogic
             return node;
         }
 
-        private InvocationExpressionSyntax TransformAssignableExpression(InvocationExpressionSyntax node, 
+        private InvocationExpressionSyntax TransformAssignableFromExpression(InvocationExpressionSyntax node, 
             MemberAccessExpressionSyntax memberAccess, bool hasNot)
         {
             if (node.ArgumentList == null || node.ArgumentList.Arguments.Count < 1)
@@ -1156,6 +1156,14 @@ namespace NUnitMigrator.Core.RewriterLogic
             {
                 node = TransformSubsetOfConstraint(node, memberAccess, hasNot);
             }
+            else if ("AssignableTo".Equals(constraintMemberAccess.Name?.Identifier.ToString()))
+            {
+                node = TransformAssignableConstraint(node, memberAccess, constraintMemberAccess, hasNot, false);
+            }
+            else if ("AssignableFrom".Equals(constraintMemberAccess.Name?.Identifier.ToString()))
+            {
+                node = TransformAssignableConstraint(node, memberAccess, constraintMemberAccess, hasNot, true);
+            }
             else if ("True".Equals(constraintName))
             {
                 node = hasNot ? TransformSimpleConstraint(node, memberAccess, "IsFalse") :
@@ -1195,6 +1203,42 @@ namespace NUnitMigrator.Core.RewriterLogic
                 Unsupported.Add(new UnsupportedNodeInfo
                 {
                     Info = "Unsupported  constraint invocation expression",
+                    Location = node.GetLocation(),
+                    NodeName = node.ToString()
+                });
+            }
+            return node;
+        }
+
+        private InvocationExpressionSyntax TransformAssignableConstraint(InvocationExpressionSyntax node,
+            MemberAccessExpressionSyntax memberAccess, MemberAccessExpressionSyntax constraintMemberAccess, bool hasNot, bool isFrom)
+        {
+            var arg0 = node.ArgumentList.Arguments[0];
+            var arg1 = node.ArgumentList.Arguments[1];
+            var invocationName = isFrom ? "GetType().IsAssignableFrom" : "GetType().IsAssignableTo";
+            ArgumentSyntax newArg0 = null;
+
+            if (constraintMemberAccess.Name is GenericNameSyntax genericNameSyntax && genericNameSyntax.TypeArgumentList.Arguments.Count == 1)
+            {
+                var expression = SyntaxFactory.TypeOfExpression(genericNameSyntax.TypeArgumentList.Arguments[0]);
+                var invocation = MSTestSyntaxFactory.CreateInvocation(arg0.Expression, invocationName, SyntaxFactory.Argument(expression));
+                newArg0 = SyntaxFactory.Argument(invocation);
+            }
+            else if(arg1.Expression is InvocationExpressionSyntax invocationAccess)
+            {
+                var invocation = MSTestSyntaxFactory.CreateInvocation(arg0.Expression, invocationName, invocationAccess.ArgumentList.Arguments[0]);
+                newArg0 = SyntaxFactory.Argument(invocation);
+            }
+            if (newArg0 != null)
+            {
+                var nodeName = hasNot ? "IsFalse" : "IsTrue";
+                node = TransformSimpleAssertWithArguments(node, memberAccess, nodeName, 2, newArg0);
+            }
+            else
+            {
+                Unsupported.Add(new UnsupportedNodeInfo
+                {
+                    Info = "Unsupported Assignable constraint",
                     Location = node.GetLocation(),
                     NodeName = node.ToString()
                 });
