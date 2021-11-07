@@ -764,7 +764,7 @@ namespace NUnitMigrator.Core.RewriterLogic
             var arg0 = node.ArgumentList.Arguments[0];
             var arg1 = node.ArgumentList.Arguments[1];
 
-            if(arg0.Expression is TypeOfExpressionSyntax typeExpression)
+            if (arg0.Expression is TypeOfExpressionSyntax typeExpression)
             {
                 var type = typeExpression.Type;
                 var list = new SeparatedSyntaxList<TypeSyntax>();
@@ -779,6 +779,16 @@ namespace NUnitMigrator.Core.RewriterLogic
                 node = node.WithExpression(memberAccess).WithArgumentList(
                     SyntaxFactory.ArgumentList(argList).NormalizeWhitespace());
 
+            }
+            else
+            {
+                Unsupported.Add(new UnsupportedNodeInfo
+                {
+                    Info = "Unsupported throws expression",
+                    Location = node.GetLocation(),
+                    NodeName = node.ToString()
+                });
+                return node;
             }
             return node;
         }
@@ -859,7 +869,7 @@ namespace NUnitMigrator.Core.RewriterLogic
         {
             //check if we have "not"
             bool hasNot = constraintMemberAccess.Expression is MemberAccessExpressionSyntax internalConstraintMA
-                && internalConstraintMA.Name.ToString().Equals("Not");
+                && (internalConstraintMA.Name.ToString().Equals("Not") || internalConstraintMA.Name.ToString().Equals("No"));
             var contstraintType = constraintMemberAccess.Expression.ToString();
 
             var arg = node.ArgumentList.Arguments[0];
@@ -967,6 +977,7 @@ namespace NUnitMigrator.Core.RewriterLogic
                 var nodeName = hasNot ? "DoesNotContain" : "Contains";
                 var newArg1 = arg1Expression.ArgumentList.Arguments[0];
                 node = TransformSimpleAssertWithArguments(node, memberAccess, nodeName, 2, arg0, newArg1);
+                node = node.ChangeName("CollectionAssert");
             }
             else
             {
@@ -1092,7 +1103,8 @@ namespace NUnitMigrator.Core.RewriterLogic
             var type = _semanticModel.GetTypeInfo(arg.Expression);
 
             ExpressionSyntax directoryExists = null;
-            if (_semanticModel.TypeSymbolMatchesType(type.ConvertedType, typeof(System.IO.DirectoryInfo)))
+            if (_semanticModel.TypeSymbolMatchesType(type.ConvertedType, typeof(System.IO.DirectoryInfo))
+                || _semanticModel.TypeSymbolMatchesType(type.ConvertedType, typeof(System.IO.FileInfo)))
             {
                 directoryExists = SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression,
                     arg.Expression, SyntaxFactory.IdentifierName("Exists"));

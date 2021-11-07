@@ -41,10 +41,10 @@ using NUnit.Framework;
 using System.Collections.Generic;
 public class A
 {
-    public void ReturnComparisonForFirstProduct()
+    public void Test()
     {
         List<int> comparisons = new List<int>();
-        var expectedProduct = 1;
+        comparisons.Add(1);
         Assert.That(comparisons, Does.Contain(1));
     }
 }";
@@ -53,11 +53,40 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Collections.Generic;
 public class A
 {
-    public void ReturnComparisonForFirstProduct()
+    public void Test()
     {
         List<int> comparisons = new List<int>();
-        var expectedProduct = 1;
+        comparisons.Add(1);
         Assert.IsTrue(comparisons.Contains(1));
+    }
+}";
+            var actual = TestSupport.RunTest(input);
+            Assert.AreEqual(expected, actual.Text);
+            Assert.IsTrue(actual.Errors.Count == 0);
+        }
+        [TestMethod]
+        public void TestCollectionContains()
+        {
+            const string input = @"
+using NUnit.Framework;
+using System.Collections.Generic;
+public class A
+{
+    public void Test()
+    {
+        int[] iarray = new int[] { 1, 2, 3 };
+        Assert.That(iarray, Has.Member(3));
+    }
+}";
+            const string expected = @"
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Collections.Generic;
+public class A
+{
+    public void Test()
+    {
+        int[] iarray = new int[] { 1, 2, 3 };
+        CollectionAssert.Contains(iarray, 3);
     }
 }";
             var actual = TestSupport.RunTest(input);
