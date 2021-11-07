@@ -1360,7 +1360,7 @@ namespace NUnitMigrator.Core.RewriterLogic
             var internalArg1 = arg1Expression.ArgumentList.Arguments[0];
             var matchTypeArgument = SyntaxFactory.Argument(MSTestSyntaxFactory.CreateObjectInstance(typeof(System.Text.RegularExpressions.Regex).FullName,
                             internalArg1)).NormalizeWhitespace();
-            node = TransformSimpleAssertWithArguments(node, memberAccess, "Matches", 2, arg0, matchTypeArgument);
+            node = TransformSimpleAssertWithArguments(node, memberAccess, name, 2, arg0, matchTypeArgument);
             node = node.ChangeName("StringAssert");
             return node;
         }
