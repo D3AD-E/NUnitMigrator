@@ -1284,17 +1284,17 @@ namespace NUnitMigrator.Core.RewriterLogic
                 hasChanged = true;
                 return node;
             }
+            else if ("Match".Equals(constraintName))
+            {
+                node = TransformRegexConstraint(node, memberAccess, hasNot);
+                hasChanged = true;
+                return node;
+            }
             else if (!hasNot)
             {
                 if ("EndWith".Equals(constraintName))
                 {
                     node = TransformGenericStringAssertConstraint(node, memberAccess, "EndsWith");
-                    hasChanged = true;
-                    return node;
-                }
-                else if ("Match".Equals(constraintName))
-                {
-                    node = TransformRegexConstraint(node, memberAccess);
                     hasChanged = true;
                     return node;
                 }
@@ -1350,12 +1350,13 @@ namespace NUnitMigrator.Core.RewriterLogic
             return node;
         }
 
-        private InvocationExpressionSyntax TransformRegexConstraint(InvocationExpressionSyntax node, MemberAccessExpressionSyntax memberAccess)
+        private InvocationExpressionSyntax TransformRegexConstraint(InvocationExpressionSyntax node, 
+            MemberAccessExpressionSyntax memberAccess, bool hasNot)
         {
             var arg0 = node.ArgumentList.Arguments[0];
             var arg1 = node.ArgumentList.Arguments[1];
             var arg1Expression = arg1.Expression as InvocationExpressionSyntax;
-
+            var name = hasNot ? "DoesNotMatch" : "Matches";
             var internalArg1 = arg1Expression.ArgumentList.Arguments[0];
             var matchTypeArgument = SyntaxFactory.Argument(MSTestSyntaxFactory.CreateObjectInstance(typeof(System.Text.RegularExpressions.Regex).FullName,
                             internalArg1)).NormalizeWhitespace();
