@@ -38,8 +38,6 @@ namespace NUnitMigrator.Core.RewriterLogic
             if (!details.Supported)
                 throw new InvalidOperationException();
 
-            // Assert.ThrowsException<<ExceptionType>>(() => /* whatever */));
-
             return SyntaxFactory.InvocationExpression(
                     SyntaxFactory.MemberAccessExpression(
                         SyntaxKind.SimpleMemberAccessExpression,
@@ -50,17 +48,7 @@ namespace NUnitMigrator.Core.RewriterLogic
                                     SyntaxFactory.SingletonSeparatedList<TypeSyntax>(
                                         SyntaxFactory.IdentifierName(details.TypeName))))))
                 .WithArgumentList(
-                    CreateArgumentList(expression, additionalArguments));
-        }
-
-
-        private static InvocationExpressionSyntax AssertOperation(string type, string method)
-        {
-            return SyntaxFactory.InvocationExpression(
-                SyntaxFactory.MemberAccessExpression(
-                    SyntaxKind.SimpleMemberAccessExpression,
-                    SyntaxFactory.IdentifierName(type),
-                    SyntaxFactory.IdentifierName(method)));
+                    AddArgumentList(expression, additionalArguments));
         }
 
         public static InvocationExpressionSyntax ThrowsExceptionWithMatch(ExpressionSyntax expression, ExceptionSyntaxData details,
@@ -113,11 +101,15 @@ namespace NUnitMigrator.Core.RewriterLogic
                     )));
             argumentList = argumentList.Add(matchTypeArgument);
 
-            return AssertOperation(type, method)
+            return SyntaxFactory.InvocationExpression(
+                SyntaxFactory.MemberAccessExpression(
+                    SyntaxKind.SimpleMemberAccessExpression,
+                        SyntaxFactory.IdentifierName(type),
+                            SyntaxFactory.IdentifierName(method)))
                 .WithArgumentList(SyntaxFactory.ArgumentList(argumentList));
         }
 
-        private static ArgumentListSyntax CreateArgumentList(ExpressionSyntax expression,
+        private static ArgumentListSyntax AddArgumentList(ExpressionSyntax expression,
             SeparatedSyntaxList<ArgumentSyntax>? additionalArguments)
         {
             if (expression == null)

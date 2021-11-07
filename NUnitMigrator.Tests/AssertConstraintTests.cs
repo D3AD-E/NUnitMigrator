@@ -276,7 +276,7 @@ public class A
     void Test()
     {
         Assert.That(""Hello"", Does.Contain(""He""));
-        Assert.That(""Hello"", Does.Not.Contain(""He""));
+        Assert.That(""Hello"", Does.Not.Contain(""Hes""));
     }
 }";
             const string expected = @"
@@ -285,8 +285,8 @@ public class A
 { 
     void Test()
     {
-        Assert.IsTrue(""Hello"".Contains(""He""));
-        Assert.IsFalse(""Hello"".Contains(""He""));
+        StringAssert.Contains(""Hello"", ""He"");
+        StringAssert.DoesNotContain(""Hello"", ""Hes"");
     }
 }";
             var actual = TestSupport.RunTest(input);

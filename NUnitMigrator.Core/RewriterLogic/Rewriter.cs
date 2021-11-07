@@ -1359,13 +1359,10 @@ namespace NUnitMigrator.Core.RewriterLogic
         {
             var arg0 = node.ArgumentList.Arguments[0];
             var arg1 = node.ArgumentList.Arguments[1];
-            var invocation = arg1.Expression is InvocationExpressionSyntax invocationExpression ? 
-                MSTestSyntaxFactory.CreateInvocation(arg0.Expression, "Contains", invocationExpression.ArgumentList.Arguments[0]) 
-                : MSTestSyntaxFactory.CreateInvocation(arg0.Expression, "Contains", arg1);
-            var newArg = SyntaxFactory.Argument(invocation);
-            var nodeName = hasNot ? "IsFalse" : "IsTrue";
-            node = TransformSimpleAssertWithArguments(node, memberAccess, nodeName, 2, newArg);
-
+            var invocation = arg1.Expression as InvocationExpressionSyntax;
+            var nodeName = hasNot ? "DoesNotContain" : "Contains";
+            node = TransformSimpleAssertWithArguments(node, memberAccess, nodeName, 2, arg0, invocation.ArgumentList.Arguments[0]);
+            node = node.ChangeName("StringAssert");
             return node;
         }
 
