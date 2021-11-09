@@ -1371,9 +1371,25 @@ namespace NUnitMigrator.Core.RewriterLogic
             var arg0 = node.ArgumentList.Arguments[0];
             var arg1 = node.ArgumentList.Arguments[1];
             var invocation = arg1.Expression as InvocationExpressionSyntax;
-            var nodeName = hasNot ? "DoesNotContain" : "Contains";
-            node = TransformSimpleAssertWithArguments(node, memberAccess, nodeName, 2, arg0, invocation.ArgumentList.Arguments[0]);
-            node = node.ChangeName("StringAssert");
+            var type = _semanticModel.GetTypeInfo(arg0.Expression);
+
+            if (type.ConvertedType?.SpecialType == SpecialType.System_String)
+            {
+                var nodeName = hasNot ? "DoesNotContain" : "Contains";
+                node = TransformSimpleAssertWithArguments(node, memberAccess, nodeName, 2, arg0, invocation.ArgumentList.Arguments[0]);
+                node = node.ChangeName("StringAssert");
+            }
+            else
+            {
+                Unsupported.Add(new UnsupportedNodeInfo
+                {
+                    Info = "Unsupported Does.Contain constraint",
+                    Location = node.GetLocation(),
+                    NodeName = node.ToString()
+                });
+            }
+
+
             return node;
         }
 

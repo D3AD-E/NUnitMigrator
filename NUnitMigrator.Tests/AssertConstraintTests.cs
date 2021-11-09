@@ -34,37 +34,6 @@ public class A
             Assert.IsTrue(actual.Errors.Count == 0);
         }
         [TestMethod]
-        public void TestCollection()
-        {
-            const string input = @"
-using NUnit.Framework;
-using System.Collections.Generic;
-public class A
-{
-    public void Test()
-    {
-        List<int> comparisons = new List<int>();
-        comparisons.Add(1);
-        Assert.That(comparisons, Does.Contain(1));
-    }
-}";
-            const string expected = @"
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System.Collections.Generic;
-public class A
-{
-    public void Test()
-    {
-        List<int> comparisons = new List<int>();
-        comparisons.Add(1);
-        Assert.IsTrue(comparisons.Contains(1));
-    }
-}";
-            var actual = TestSupport.RunTest(input);
-            Assert.AreEqual(expected, actual.Text);
-            Assert.IsTrue(actual.Errors.Count == 0);
-        }
-        [TestMethod]
         public void TestCollectionContains()
         {
             const string input = @"
