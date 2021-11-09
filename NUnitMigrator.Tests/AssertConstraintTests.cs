@@ -264,6 +264,66 @@ public class A
         }
 
         [TestMethod]
+        public void TestIsUnique()
+        {
+            const string input = @"
+using NUnit.Framework;
+using System.Collections.Generic;
+public class A
+{ 
+    void Test()
+    {
+        var a = new List<int>();
+        Assert.That(a, Is.Unique);
+    }
+}";
+            const string expected = @"
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Collections.Generic;
+public class A
+{ 
+    void Test()
+    {
+        var a = new List<int>();
+        CollectionAssert.AllItemsAreUnique(a);
+    }
+}";
+            var actual = TestSupport.RunTest(input);
+            Assert.AreEqual(expected, actual.Text);
+            Assert.IsTrue(actual.Errors.Count == 0);
+        }
+
+        [TestMethod]
+        public void TestDoesContain()
+        {
+            const string input = @"
+using NUnit.Framework;
+using System.Collections.Generic;
+public class A
+{ 
+    void Test()
+    {
+        var a = new List<int>();
+        Assert.That(a, Does.Contain(1));
+    }
+}";
+            const string expected = @"
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Collections.Generic;
+public class A
+{ 
+    void Test()
+    {
+        var a = new List<int>();
+        Assert.IsTrue(a.Contains(1));
+    }
+}";
+            var actual = TestSupport.RunTest(input);
+            Assert.AreEqual(expected, actual.Text);
+            Assert.IsTrue(actual.Errors.Count == 0);
+        }
+
+        [TestMethod]
         public void TestIsNotNull()
         {
             const string input = @"

@@ -1146,6 +1146,11 @@ namespace NUnitMigrator.Core.RewriterLogic
             {
                 node = TransformEqualToConstraint(node, memberAccess, hasNot);
             }
+            else if ("Unique".Equals(constraintName) && !hasNot)
+            {
+                node = TransformSimpleConstraint(node, memberAccess, "AllItemsAreUnique");
+                node = node.ChangeName("CollectionAssert");
+            }
             else if ("Null".Equals(constraintName))
             {
                 node = hasNot ? TransformSimpleConstraint(node, memberAccess, "IsNotNull") :
@@ -1372,23 +1377,18 @@ namespace NUnitMigrator.Core.RewriterLogic
             var arg1 = node.ArgumentList.Arguments[1];
             var invocation = arg1.Expression as InvocationExpressionSyntax;
             var type = _semanticModel.GetTypeInfo(arg0.Expression);
-
             if (type.ConvertedType?.SpecialType == SpecialType.System_String)
             {
                 var nodeName = hasNot ? "DoesNotContain" : "Contains";
                 node = TransformSimpleAssertWithArguments(node, memberAccess, nodeName, 2, arg0, invocation.ArgumentList.Arguments[0]);
                 node = node.ChangeName("StringAssert");
             }
-            else
+            else 
             {
-                Unsupported.Add(new UnsupportedNodeInfo
-                {
-                    Info = "Unsupported Does.Contain constraint",
-                    Location = node.GetLocation(),
-                    NodeName = node.ToString()
-                });
+                var nodeName = hasNot ? "IsFalse" : "IsTrue";
+                var newArg = SyntaxFactory.Argument(MSTestSyntaxFactory.CreateInvocation(arg0.Expression, "Contains", invocation.ArgumentList.Arguments[0]));
+                node = TransformSimpleAssertWithArguments(node, memberAccess, nodeName, 2, newArg);
             }
-
 
             return node;
         }
