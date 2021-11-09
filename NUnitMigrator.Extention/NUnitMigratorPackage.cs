@@ -28,6 +28,8 @@ namespace NUnitMigrator.Extention
     [PackageRegistration(UseManagedResourcesOnly = true, AllowsBackgroundLoading = true)]
     [Guid(PackageGuidString)]
     [ProvideMenuResource("Menus.ctmenu", 1)]
+    [ProvideOptionPage(typeof(OptionsGrid),
+    "NUnitMigrator", "NUnitMigrator options", 0, 0, true)]
     public sealed class NUnitMigratorPackage : AsyncPackage
     {
          /// <summary>
@@ -63,19 +65,22 @@ namespace NUnitMigrator.Extention
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             IVsOutputWindow outWindow = Package.GetGlobalService(typeof(SVsOutputWindow)) as IVsOutputWindow;
-
-            //Guid generalPaneGuid = VSConstants.GUID_OutWindowGeneralPane;
-            //IVsOutputWindowPane generalPane;
-            //outWindow.GetPane(ref generalPaneGuid, out generalPane);
-
             var guid = new Guid(OutputWindowPaneGuid);
             outWindow.CreatePane(ref guid, "NUnitMigrator", 1, 1);
             outWindow.GetPane(ref guid, out var pane);
-            //generalPane.OutputString("Hello World!");
             pane.Activate(); 
             return pane;
         }
 
-    #endregion
+        public bool CommentUnsupported
+        {
+            get
+            {
+                OptionsGrid page = (OptionsGrid)GetDialogPage(typeof(OptionsGrid));
+                return page.CommentUnsupported;
+            }
+        }
+
+        #endregion
     }
 }

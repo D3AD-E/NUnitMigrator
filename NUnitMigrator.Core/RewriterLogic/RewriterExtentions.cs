@@ -255,6 +255,16 @@ namespace NUnitMigrator.Core.RewriterLogic
             return node;
         }
 
+        public static MethodDeclarationSyntax Comment(this MethodDeclarationSyntax node)
+        {
+            var originalTrailingTrivia = node.GetTrailingTrivia();
+            originalTrailingTrivia = originalTrailingTrivia.Insert(0, SyntaxFactory.SyntaxTrivia(SyntaxKind.MultiLineCommentTrivia, "*/"));
+            var originalLeadingTrivia = node.GetLeadingTrivia();
+            originalLeadingTrivia = originalLeadingTrivia.Add(SyntaxFactory.SyntaxTrivia(SyntaxKind.MultiLineCommentTrivia, "/*"));
+            node = node.WithTrailingTrivia(originalTrailingTrivia).WithLeadingTrivia(originalLeadingTrivia);
+            return node;
+        }
+
         public static SyntaxTriviaList GetClosestWhitespaceTrivia(this SyntaxNode node, bool leading)
         {
             var list = leading ? node.GetLeadingTrivia() : node.GetTrailingTrivia();

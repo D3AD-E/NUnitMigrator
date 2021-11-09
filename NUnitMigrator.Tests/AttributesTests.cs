@@ -284,8 +284,8 @@ public class A
     }
 }";
 
-            var expected = TestSupport.RunTest(input);
-            Assert.IsTrue(expected.Errors.Count > 0);
+            var actual = TestSupport.RunTest(input);
+            Assert.IsTrue(actual.Errors.Count > 0);
         }
 
         [TestMethod]

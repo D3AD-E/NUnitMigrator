@@ -1,6 +1,7 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using NUnitMigrator.Core.RewriterLogic.Data;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,15 +16,21 @@ namespace NUnitMigrator.Core.RewriterLogic
 
         private readonly MethodState _methodState;
         private readonly ClassState _classState;
-        
+        private RewriterOptions _options;
 
         public Rewriter(SemanticModel model) : base()
         {
             _semanticModel = model;
             _methodState = new MethodState();
             _classState = new ClassState();
+            _options = new RewriterOptions();
             Unsupported = new List<UnsupportedNodeInfo>();
             ChangesAmount = 0;
+        }
+
+        public void SetOptions(RewriterOptions options)
+        {
+            _options = options;
         }
 
         public override SyntaxNode VisitClassDeclaration(ClassDeclarationSyntax node)
@@ -47,6 +54,7 @@ namespace NUnitMigrator.Core.RewriterLogic
         {
             _methodState.Clear();
             _methodState.CurrentMethod = node;
+            int unsupportedCount = Unsupported.Count();
             node = base.VisitMethodDeclaration(node) as MethodDeclarationSyntax;
             if (node != null)
             {
@@ -69,6 +77,9 @@ namespace NUnitMigrator.Core.RewriterLogic
                     node = node.AddModifiers(SyntaxFactory.ParseToken("static "));
                 if (_methodState.ValuesRangeState.IsPropertyNeeded)
                     node = node.AddParametrization(_methodState.ValuesRangeState.Attributes);
+
+                if (_options.CommentUnsupported && unsupportedCount < Unsupported.Count)
+                    node = node.Comment();
             }
             return node;
         }

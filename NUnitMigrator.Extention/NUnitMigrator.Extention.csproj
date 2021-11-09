@@ -48,6 +48,9 @@
   <ItemGroup>
     <Compile Include="ExtentionData.cs" />
     <Compile Include="MigrateProjectCommand.cs" />
+    <Compile Include="OptionsGrid.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="PackageManager.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="NUnitMigratorPackage.cs" />

@@ -4,6 +4,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Editing;
 using Microsoft.CodeAnalysis.MSBuild;
 using NUnitMigrator.Core.RewriterLogic;
+using NUnitMigrator.Core.RewriterLogic.Data;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,7 +15,7 @@ namespace NUnitMigrator.App.Logic
 {
     internal class MainLogic
     {
-        public static async void Migrate(string path)
+        public static async void Migrate(string path, RewriterOptions options = null)
         {
             var visualStudioInstances = MSBuildLocator.QueryVisualStudioInstances().ToArray();
             var instance = visualStudioInstances.Length == 1 ? visualStudioInstances[0]
@@ -53,6 +54,8 @@ namespace NUnitMigrator.App.Logic
                         Console.Write($"Checking document: {document.Name}... ");
                         var model = await document.GetSemanticModelAsync();
                         var rewriter = new Rewriter(model);
+                        if (options != null)
+                            rewriter.SetOptions(options);
                         var tree = await document.GetSyntaxTreeAsync();
                         var root = await tree.GetRootAsync();
                         if (!IsNUnitTestFile(root))

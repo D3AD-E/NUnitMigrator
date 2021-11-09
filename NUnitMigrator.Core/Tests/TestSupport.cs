@@ -2,6 +2,7 @@
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Text;
 using NUnitMigrator.Core.RewriterLogic;
+using NUnitMigrator.Core.RewriterLogic.Data;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -18,7 +19,7 @@ namespace NUnitMigrator.Tests
             public string Text;
             public List<UnsupportedNodeInfo> Errors;
         }
-        public static TestResult RunTest(string input)
+        public static TestResult RunTest(string input, RewriterOptions options = null)
         {
             var tree = Parse(input);
 
@@ -40,7 +41,8 @@ namespace NUnitMigrator.Tests
                 Console.WriteLine(error);
             }
             var rewriter = new Rewriter(semanticModel);
-            
+            if(options!=null)
+                rewriter.SetOptions(options);
             var text = rewriter.Visit(tree.GetRoot());
             TestResult result = new TestResult
             {
@@ -49,7 +51,7 @@ namespace NUnitMigrator.Tests
             };
 
             return result;
-    }
+        }
 
         private static SyntaxTree Parse(string text)
         {

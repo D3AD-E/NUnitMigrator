@@ -33,7 +33,7 @@ namespace NUnitMigrator.Extention
         /// <summary>
         /// VS Package that provides this command, not null.
         /// </summary>
-        private readonly AsyncPackage _package;
+        private readonly NUnitMigratorPackage _package;
         private readonly IVsOutputWindowPane _outputWindowPane;
         private readonly ErrorListProvider _errorListProvider;
         /// <summary>
@@ -42,7 +42,7 @@ namespace NUnitMigrator.Extention
         /// </summary>
         /// <param name="package">Owner package, not null.</param>
         /// <param name="commandService">Command service to add command to, not null.</param>
-        private MigrateProjectCommand(AsyncPackage package, ErrorListProvider errorListProvider, OleMenuCommandService commandService, IVsOutputWindowPane outputWindowPane)
+        private MigrateProjectCommand(NUnitMigratorPackage package, ErrorListProvider errorListProvider, OleMenuCommandService commandService, IVsOutputWindowPane outputWindowPane)
         {
             this._package = package ?? throw new ArgumentNullException(nameof(package));
             _errorListProvider = errorListProvider ?? throw new ArgumentNullException(nameof(errorListProvider));
@@ -82,7 +82,7 @@ namespace NUnitMigrator.Extention
         /// Initializes the singleton instance of the command.
         /// </summary>
         /// <param name="package">Owner package, not null.</param>
-        public static async Task InitializeAsync(AsyncPackage package, ErrorListProvider errorListProvider, IVsOutputWindowPane outputWindowPane)
+        public static async Task InitializeAsync(NUnitMigratorPackage package, ErrorListProvider errorListProvider, IVsOutputWindowPane outputWindowPane)
         {
             // Switch to the main thread - the call to AddCommand in MigrateProjectCommand's constructor requires
             // the UI thread.
@@ -148,6 +148,9 @@ namespace NUnitMigrator.Extention
                             var semanticModel = await document.GetSemanticModelAsync();
                             var tree = await document.GetSyntaxTreeAsync();
                             var rewriter = new Rewriter(semanticModel);
+
+                            rewriter.SetOptions(new Core.RewriterLogic.Data.RewriterOptions { CommentUnsupported = _package.CommentUnsupported });
+
                             var result = rewriter.Visit(await tree.GetRootAsync());
 
 

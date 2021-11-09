@@ -178,14 +178,15 @@
   <ItemGroup>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="RewriterLogic\Data\RewriterOptions.cs" />
     <Compile Include="RewriterLogic\ExceptionParser.cs" />
-    <Compile Include="RewriterLogic\ExceptionSyntaxData.cs" />
+    <Compile Include="RewriterLogic\Data\ExceptionSyntaxData.cs" />
     <Compile Include="RewriterLogic\MSTestSyntaxFactory.cs" />
     <Compile Include="RewriterLogic\States\ClassState.cs" />
     <Compile Include="RewriterLogic\States\MethodState.cs" />
     <Compile Include="RewriterLogic\Rewriter.cs" />
-    <Compile Include="RewriterLogic\RewriterData.cs" />
-    <Compile Include="RewriterLogic\UnsupportedNodeInfo.cs" />
+    <Compile Include="RewriterLogic\Data\RewriterData.cs" />
+    <Compile Include="RewriterLogic\Data\UnsupportedNodeInfo.cs" />
     <Compile Include="RewriterLogic\RewriterExtentions.cs" />
     <Compile Include="RewriterLogic\States\RewriterStates.cs" />
     <Compile Include="Tests\TestSupport.cs" />

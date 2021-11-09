@@ -1,4 +1,5 @@
 ﻿using NUnitMigrator.App.Logic;
+using PowerArgs;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,13 +14,8 @@ namespace NUnitMigrator.App
         [STAThreadAttribute]
         static void Main(string[] args)
         {
-            OpenFileDialog dialog = new OpenFileDialog();
-            if (DialogResult.OK == dialog.ShowDialog())
-            {
-                string path = dialog.FileName;
-                MainLogic.Migrate(path);
-            }
-            Console.ReadLine();
+            Args.InvokeMain<ParseMain>(args);
+           
         }
     }
 }
