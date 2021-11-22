@@ -87,28 +87,29 @@ namespace NUnitMigrator.Core.RewriterLogic
 
                     case "Message":
                         if (details.Match != MatchType.None)
-                        {
                             details.MatchTarget = memberName;
-                        }
                         else
-                        {
                             details.Supported = false;
-                        }
-
                         break;
 
                     case "Property":
                         if (details.Match != MatchType.None)
                         {
                             details.MatchTarget = memberName;
-                            details.MatchTargetArguments = memberAccess.TransformParentInvocationArguments(details, 1,
-                                (arg, i) =>
+                            if (memberAccess?.Parent is InvocationExpressionSyntax invocation && invocation.ArgumentList?.Arguments.Count == 1)
+                            {
+                                var result = new SeparatedSyntaxList<ArgumentSyntax>();
+                                for (int i = 0; i < invocation.ArgumentList.Arguments.Count; i++)
                                 {
-                                    string str = arg.Expression?.GetLiteralString();
+                                    string str = invocation.ArgumentList.Arguments[i].Expression?.GetLiteralString();
                                     if (str != null)
-                                        return SyntaxFactory.Argument(SyntaxFactory.IdentifierName(str));
-                                    return null;
-                                });
+                                    {
+                                        var transformed = SyntaxFactory.Argument(SyntaxFactory.IdentifierName(str));
+                                        result = result.Add(transformed);
+                                    }
+                                }
+                                details.MatchTargetArguments = SyntaxFactory.ArgumentList(result);
+                            }
                         }
                         else
                         {
@@ -118,38 +119,22 @@ namespace NUnitMigrator.Core.RewriterLogic
                         break;
 
                     case "With":
-                        if (details.MatchTarget == null ||
-                            details.Match == MatchType.None)
-                        {
+                        if (details.MatchTarget == null || details.Match == MatchType.None)
                             details.Supported = false;
-                        }
-
                         break;
 
                     default:
-                        if (isGenericException)
-                        {
-                            if (memberName != null && !(memberName.EndsWith("Exception")))
-                            {
-                                details.Supported = false;
-                            }
-                        }
-                        else
-                        {
-                            if (memberName != null && !(
+                        if (isGenericException && (memberName != null && !(memberName.EndsWith("Exception"))))
+                            details.Supported = false;
+                        else if(memberName != null && !(
                                     memberName.Equals("Throws") ||
                                     memberName.StartsWith("TypeOf<") ||
                                     memberName.StartsWith("InstanceOf<") ||
                                     memberName.Equals("Exception")))
-                            {
-                                details.Supported = false;
-                            }
-                        }
-
+                            details.Supported = false;
                         break;
                 }
             }
-        
         }
 
         public static bool TryGetExceptionDetails(SyntaxNode node, string exceptionMethod, ExceptionSyntaxData details)

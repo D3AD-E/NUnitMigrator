@@ -14,11 +14,11 @@ namespace NUnitMigrator.Tests
 using NUnit.Framework;
 public class A
 { 
-    string Dummy() { return ""ParamName""; }
+    string TestMe() { return ""ParamName""; }
     void Test()
     {
-        Assert.That(() => Dummy(), Throws.TypeOf<ArgumentException>().With.Property(""ParamName"").Contains(""arg0""));
-        Assert.That(() => Dummy(), Throws.TypeOf<ArgumentException>().With.Property(nameof(ArgumentException.ParamName)).Contains(""arg0""));
+        Assert.That(() => TestMe(), Throws.TypeOf<ArgumentException>().With.Property(""ParamName"").Contains(""arg0""));
+        Assert.That(() => TestMe(), Throws.TypeOf<ArgumentException>().With.Property(nameof(ArgumentException.ParamName)).Contains(""arg0""));
     }
 }
 ";
@@ -26,11 +26,11 @@ public class A
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 public class A
 { 
-    string Dummy() { return ""ParamName""; }
+    string TestMe() { return ""ParamName""; }
     void Test()
     {
-        StringAssert.Contains(Assert.ThrowsException<ArgumentException>(() => Dummy()).ParamName,""arg0"");
-        StringAssert.Contains(Assert.ThrowsException<ArgumentException>(() => Dummy()).ParamName,""arg0"");
+        StringAssert.Contains(Assert.ThrowsException<ArgumentException>(() => TestMe()).ParamName,""arg0"");
+        StringAssert.Contains(Assert.ThrowsException<ArgumentException>(() => TestMe()).ParamName,""arg0"");
     }
 }
 ";
@@ -46,18 +46,18 @@ public class A
 using NUnit.Framework;
 public class A
 { 
-    void Dummy() { }
+    void TestMe() { }
     void Test()
     {
-        Assert.That(() => Dummy(), Throws.TypeOf<InvalidOperationException>().With.Message.Contains(""the message""));
-        Assert.That(() => Dummy(), Throws.TypeOf<InvalidOperationException>().With.Message.StartsWith(""the message""));
-        Assert.That(() => Dummy(), Throws.TypeOf<InvalidOperationException>().With.Message.StartWith(""the message""));
-        Assert.That(() => Dummy(), Throws.TypeOf<InvalidOperationException>().With.Message.EndsWith(""the message""));
-        Assert.That(() => Dummy(), Throws.TypeOf<InvalidOperationException>().With.Message.EndWith(""the message""));
-        Assert.That(() => Dummy(), Throws.TypeOf<InvalidOperationException>().With.Message.EqualTo(""the message""));
-        Assert.That(() => Dummy(), Throws.TypeOf<InvalidOperationException>().With.Message.Match(""the message""));
-        Assert.That(() => Dummy(), Throws.TypeOf<InvalidOperationException>().With.Message.Matches(""the message""));
-        Assert.That(() => Dummy(), Throws.Exception.Message.Contains(""the message""));
+        Assert.That(() => TestMe(), Throws.TypeOf<InvalidOperationException>().With.Message.Contains(""the message""));
+        Assert.That(() => TestMe(), Throws.TypeOf<InvalidOperationException>().With.Message.StartsWith(""the message""));
+        Assert.That(() => TestMe(), Throws.TypeOf<InvalidOperationException>().With.Message.StartWith(""the message""));
+        Assert.That(() => TestMe(), Throws.TypeOf<InvalidOperationException>().With.Message.EndsWith(""the message""));
+        Assert.That(() => TestMe(), Throws.TypeOf<InvalidOperationException>().With.Message.EndWith(""the message""));
+        Assert.That(() => TestMe(), Throws.TypeOf<InvalidOperationException>().With.Message.EqualTo(""the message""));
+        Assert.That(() => TestMe(), Throws.TypeOf<InvalidOperationException>().With.Message.Match(""the message""));
+        Assert.That(() => TestMe(), Throws.TypeOf<InvalidOperationException>().With.Message.Matches(""the message""));
+        Assert.That(() => TestMe(), Throws.Exception.Message.Contains(""the message""));
     }
 }
 ";
@@ -65,18 +65,18 @@ public class A
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 public class A
 { 
-    void Dummy() { }
+    void TestMe() { }
     void Test()
     {
-        StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Dummy()).Message,""the message"");
-        StringAssert.StartsWith(Assert.ThrowsException<InvalidOperationException>(() => Dummy()).Message,""the message"");
-        StringAssert.StartsWith(Assert.ThrowsException<InvalidOperationException>(() => Dummy()).Message,""the message"");
-        StringAssert.EndsWith(Assert.ThrowsException<InvalidOperationException>(() => Dummy()).Message,""the message"");
-        StringAssert.EndsWith(Assert.ThrowsException<InvalidOperationException>(() => Dummy()).Message,""the message"");
-        Assert.AreEqual(Assert.ThrowsException<InvalidOperationException>(() => Dummy()).Message,""the message"");
-        StringAssert.Matches(Assert.ThrowsException<InvalidOperationException>(() => Dummy()).Message,new System.Text.RegularExpressions.Regex(""the message""));
-        StringAssert.Matches(Assert.ThrowsException<InvalidOperationException>(() => Dummy()).Message,new System.Text.RegularExpressions.Regex(""the message""));
-        StringAssert.Contains(Assert.ThrowsException<Exception>(() => Dummy()).Message,""the message"");
+        StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => TestMe()).Message,""the message"");
+        StringAssert.StartsWith(Assert.ThrowsException<InvalidOperationException>(() => TestMe()).Message,""the message"");
+        StringAssert.StartsWith(Assert.ThrowsException<InvalidOperationException>(() => TestMe()).Message,""the message"");
+        StringAssert.EndsWith(Assert.ThrowsException<InvalidOperationException>(() => TestMe()).Message,""the message"");
+        StringAssert.EndsWith(Assert.ThrowsException<InvalidOperationException>(() => TestMe()).Message,""the message"");
+        Assert.AreEqual(Assert.ThrowsException<InvalidOperationException>(() => TestMe()).Message,""the message"");
+        StringAssert.Matches(Assert.ThrowsException<InvalidOperationException>(() => TestMe()).Message,new System.Text.RegularExpressions.Regex(""the message""));
+        StringAssert.Matches(Assert.ThrowsException<InvalidOperationException>(() => TestMe()).Message,new System.Text.RegularExpressions.Regex(""the message""));
+        StringAssert.Contains(Assert.ThrowsException<Exception>(() => TestMe()).Message,""the message"");
     }
 }
 ";
@@ -92,10 +92,10 @@ public class A
 using NUnit.Framework;
 public class A
 { 
-    void Dummy() { }
+    void TestMe() { }
     void Test()
     {
-        Assert.That(Dummy, Throws.ArgumentNullException, ""message {0}"", 1);
+        Assert.That(TestMe, Throws.ArgumentNullException, ""message {0}"", 1);
     }
 }
 ";
@@ -103,10 +103,10 @@ public class A
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 public class A
 { 
-    void Dummy() { }
+    void TestMe() { }
     void Test()
     {
-        Assert.ThrowsException<ArgumentNullException>(Dummy,""message {0}"",1);
+        Assert.ThrowsException<ArgumentNullException>(TestMe,""message {0}"",1);
     }
 }
 ";
@@ -122,12 +122,12 @@ public class A
 using NUnit.Framework;
 public class A
 { 
-    void Dummy() { }
+    void TestMe() { }
     void Test()
     {
-        Assert.That(Dummy, Throws.ArgumentNullException);
+        Assert.That(TestMe, Throws.ArgumentNullException);
         Assert.That(() => { int i = 0; i++; }, Throws.ArgumentNullException);
-        Assert.That(() => Dummy(), Throws.ArgumentNullException);
+        Assert.That(() => TestMe(), Throws.ArgumentNullException);
     }
 }
 ";
@@ -135,12 +135,12 @@ public class A
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 public class A
 { 
-    void Dummy() { }
+    void TestMe() { }
     void Test()
     {
-        Assert.ThrowsException<ArgumentNullException>(Dummy);
+        Assert.ThrowsException<ArgumentNullException>(TestMe);
         Assert.ThrowsException<ArgumentNullException>(() => { int i = 0; i++; });
-        Assert.ThrowsException<ArgumentNullException>(() => Dummy());
+        Assert.ThrowsException<ArgumentNullException>(() => TestMe());
     }
 }
 ";
@@ -156,14 +156,14 @@ public class A
 using NUnit.Framework;
 public class A
 { 
-    void Dummy() { }
+    void TestMe() { }
     void Test()
     {
-        Assert.That(Dummy, Throws.ArgumentNullException);
+        Assert.That(TestMe, Throws.ArgumentNullException);
         Assert.That(() => { int i = 0; i++; }, Throws.ArgumentNullException);
-        Assert.That(() => Dummy(), Throws.ArgumentNullException);
-        Assert.That(() => Dummy(), Throws.Exception.TypeOf<OutOfMemoryException>());
-        Assert.That(() => Dummy(), Throws.TypeOf<OutOfMemoryException>());
+        Assert.That(() => TestMe(), Throws.ArgumentNullException);
+        Assert.That(() => TestMe(), Throws.Exception.TypeOf<OutOfMemoryException>());
+        Assert.That(() => TestMe(), Throws.TypeOf<OutOfMemoryException>());
     }
 }
 ";
@@ -172,14 +172,14 @@ public class A
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 public class A
 { 
-    void Dummy() { }
+    void TestMe() { }
     void Test()
     {
-        Assert.ThrowsException<ArgumentNullException>(Dummy);
+        Assert.ThrowsException<ArgumentNullException>(TestMe);
         Assert.ThrowsException<ArgumentNullException>(() => { int i = 0; i++; });
-        Assert.ThrowsException<ArgumentNullException>(() => Dummy());
-        Assert.ThrowsException<OutOfMemoryException>(() => Dummy());
-        Assert.ThrowsException<OutOfMemoryException>(() => Dummy());
+        Assert.ThrowsException<ArgumentNullException>(() => TestMe());
+        Assert.ThrowsException<OutOfMemoryException>(() => TestMe());
+        Assert.ThrowsException<OutOfMemoryException>(() => TestMe());
     }
 }
 ";

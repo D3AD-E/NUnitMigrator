@@ -393,38 +393,5 @@ namespace NUnitMigrator.Core.RewriterLogic
             details.Supported = false;
             return null;
         }
-
-        public static ArgumentListSyntax TransformParentInvocationArguments(
-            this MemberAccessExpressionSyntax memberAccess,
-            ExceptionSyntaxData details, int numArgumentsRequired,
-            Func<ArgumentSyntax, int, ArgumentSyntax> transform)
-        {
-            if (details == null)
-                throw new ArgumentNullException(nameof(details));
-            if (transform == null)
-                throw new ArgumentNullException(nameof(transform));
-
-            if (memberAccess?.Parent is InvocationExpressionSyntax invocation &&
-                invocation.ArgumentList?.Arguments.Count == numArgumentsRequired)
-            {
-                var result = new SeparatedSyntaxList<ArgumentSyntax>();
-                for (int i = 0; i < invocation.ArgumentList.Arguments.Count; i++)
-                {
-                    var transformed = transform(invocation.ArgumentList.Arguments[i], i);
-                    if (transformed == null)
-                    {
-                        details.Supported = false;
-                        return null;
-                    }
-                    result = result.Add(transformed);
-                }
-                return SyntaxFactory.ArgumentList(result);
-            }
-
-            details.Supported = false;
-            return null;
-        }
-
-        
     }
 }
