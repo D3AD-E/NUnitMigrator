@@ -126,12 +126,6 @@ namespace NUnitMigrator.Core.RewriterLogic
                     default:
                         if (isGenericException && (memberName != null && !(memberName.EndsWith("Exception"))))
                             details.Supported = false;
-                        else if(memberName != null && !(
-                                    memberName.Equals("Throws") ||
-                                    memberName.StartsWith("TypeOf<") ||
-                                    memberName.StartsWith("InstanceOf<") ||
-                                    memberName.Equals("Exception")))
-                            details.Supported = false;
                         break;
                 }
             }
