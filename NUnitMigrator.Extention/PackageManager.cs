@@ -44,13 +44,13 @@ namespace NUnitMigrator.Extention
 
         private void OnEventsOnPackageInstalled(IVsPackageMetadata m)
         {
-            ThreadHelper.ThrowIfNotOnUIThread();
+           // ThreadHelper.ThrowIfNotOnUIThread();
             _outputWindowPane.OutputStringThreadSafe($"Installed package {m.Id}, version {m.VersionString}\n");
         }
 
         private void OnEventsOnPackageInstalling(IVsPackageMetadata m)
         {
-            ThreadHelper.ThrowIfNotOnUIThread();
+            //ThreadHelper.ThrowIfNotOnUIThread();
             _outputWindowPane.OutputStringThreadSafe($"Installing package {m.Id}, version {m.VersionString}\n");
         }
 

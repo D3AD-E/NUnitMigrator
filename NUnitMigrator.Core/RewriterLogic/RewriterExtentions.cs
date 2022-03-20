@@ -265,6 +265,14 @@ namespace NUnitMigrator.Core.RewriterLogic
             return node;
         }
 
+        public static AttributeListSyntax Comment(this AttributeListSyntax node)
+        {
+            var originalLeadingTrivia = node.GetLeadingTrivia();
+            originalLeadingTrivia = originalLeadingTrivia.Add(SyntaxFactory.SyntaxTrivia(SyntaxKind.SingleLineCommentTrivia, "//"));
+            node = node.WithLeadingTrivia(originalLeadingTrivia);
+            return node;
+        }
+
         public static SyntaxTriviaList GetClosestWhitespaceTrivia(this SyntaxNode node, bool leading)
         {
             var list = leading ? node.GetLeadingTrivia() : node.GetTrailingTrivia();

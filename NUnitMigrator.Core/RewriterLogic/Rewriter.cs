@@ -81,6 +81,7 @@ namespace NUnitMigrator.Core.RewriterLogic
                 if (_options.CommentUnsupported && unsupportedCount < Unsupported.Count)
                     node = node.Comment();
             }
+            _methodState.Clear();
             return node;
         }
 
@@ -93,7 +94,14 @@ namespace NUnitMigrator.Core.RewriterLogic
                 ChangesAmount++;
             return attribute;
         }
-       
+        public override SyntaxNode VisitAttributeList(AttributeListSyntax node)
+        {
+            int unsupportedCount = Unsupported.Count();
+            node = (AttributeListSyntax) base.VisitAttributeList(node);
+            if (_options.CommentUnsupported && unsupportedCount < Unsupported.Count && _methodState.CurrentMethod == null)
+                node = node.Comment();
+            return node;
+        }
         private AttributeSyntax HandleAttribute(AttributeSyntax attribute)
         {
             var name = attribute.Name.ToString();
@@ -102,6 +110,15 @@ namespace NUnitMigrator.Core.RewriterLogic
                 case RewriterData.NUnitData.TEST_FIXTURE_ATTRIBUTE:
                     if (attribute.ArgumentList == null || attribute.ArgumentList.Arguments.Count == 0)
                         attribute = attribute.WithName(SyntaxFactory.IdentifierName(RewriterData.MSTestData.TEST_CLASS_ATTRIBUTE));
+                    else
+                    {
+                        Unsupported.Add(new UnsupportedNodeInfo
+                        {
+                            Info = "Attribute is not supported",
+                            Location = attribute.GetLocation(),
+                            NodeName = attribute.Name.ToString()
+                        });
+                    }
                     break;
                 case RewriterData.NUnitData.NON_PARALLELIZABLE_ATTRIBUTE:
                     attribute = attribute.WithName(SyntaxFactory.IdentifierName(RewriterData.MSTestData.DO_NOT_PARRELELIZE_ATTRIBUTE));
@@ -151,7 +168,17 @@ namespace NUnitMigrator.Core.RewriterLogic
                         _classState.RemovedAttributes.Add(attribute);
                     break;
                 case RewriterData.NUnitData.TEST_CASE_ATTRIBUTE:
-                    attribute = TransformTestCaseAttribute(attribute);
+                    if(attribute.ArgumentList != null)
+                        attribute = TransformTestCaseAttribute(attribute);
+                    else
+                    {
+                        Unsupported.Add(new UnsupportedNodeInfo
+                        {
+                            Info = "Attribute is not supported",
+                            Location = attribute.GetLocation(),
+                            NodeName = attribute.Name.ToString()
+                        });
+                    }
                     break;
                 case RewriterData.NUnitData.OTSU_ATTRIBUTE:
                 case RewriterData.NUnitData.TFSE_ATTRIBUTE:
@@ -175,6 +202,7 @@ namespace NUnitMigrator.Core.RewriterLogic
                 case RewriterData.NUnitData.PARALLELIZABLE_ATTRIBUTE:
                 case RewriterData.NUnitData.SEQUENTIAL_ATTRIBUTE:
                     _methodState.RemovedAttributes.Add(attribute);
+                    _classState.RemovedAttributes.Add(attribute);
                     break;
                 case RewriterData.NUnitData.VALUES_ATTRIBUTE:
                 case RewriterData.NUnitData.RANGE_ATTRIBUTE:

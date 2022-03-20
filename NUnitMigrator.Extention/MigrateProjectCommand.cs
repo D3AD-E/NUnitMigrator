@@ -211,7 +211,7 @@ namespace NUnitMigrator.Extention
             foreach (var node in unsupportedNodes)
             {
                 OutputMessage(node.ToString());
-                _errorListProvider.AddTask(node);
+                //_errorListProvider.AddTask(node);
             }
         }
 
