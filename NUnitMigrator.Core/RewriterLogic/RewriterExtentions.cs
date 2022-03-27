@@ -255,7 +255,7 @@ namespace NUnitMigrator.Core.RewriterLogic
             return node;
         }
 
-        public static MethodDeclarationSyntax Comment(this MethodDeclarationSyntax node)
+        public static CSharpSyntaxNode CommentMultiline(this CSharpSyntaxNode node)
         {
             var originalTrailingTrivia = node.GetTrailingTrivia();
             originalTrailingTrivia = originalTrailingTrivia.Insert(0, SyntaxFactory.SyntaxTrivia(SyntaxKind.MultiLineCommentTrivia, "*/"));

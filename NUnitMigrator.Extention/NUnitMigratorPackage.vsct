@@ -56,7 +56,7 @@
         <Parent guid="guidNUnitMigratorPackageCmdSet" id="MyMenuGroup" />
         <Icon guid="guidImages" id="bmpPic1" />
         <Strings>
-          <ButtonText>Invoke MigrateProjectCommand</ButtonText>
+          <ButtonText>Migrate project</ButtonText>
         </Strings>
       </Button>
     </Buttons>

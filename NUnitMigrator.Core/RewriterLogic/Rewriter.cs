@@ -78,8 +78,8 @@ namespace NUnitMigrator.Core.RewriterLogic
                 if (_methodState.ValuesRangeState.IsPropertyNeeded)
                     node = node.AddParametrization(_methodState.ValuesRangeState.Attributes);
 
-                if (_options.CommentUnsupported && unsupportedCount < Unsupported.Count)
-                    node = node.Comment();
+                //if (_options.CommentUnsupported && unsupportedCount < Unsupported.Count)
+                //    node = node.Comment();
             }
             _methodState.Clear();
             return node;
@@ -97,8 +97,8 @@ namespace NUnitMigrator.Core.RewriterLogic
         public override SyntaxNode VisitAttributeList(AttributeListSyntax node)
         {
             int unsupportedCount = Unsupported.Count();
-            node = (AttributeListSyntax) base.VisitAttributeList(node);
-            if (_options.CommentUnsupported && unsupportedCount < Unsupported.Count && _methodState.CurrentMethod == null)
+            node = (AttributeListSyntax)base.VisitAttributeList(node);
+            if (_options.CommentUnsupported && unsupportedCount < Unsupported.Count)
                 node = node.Comment();
             return node;
         }
@@ -450,6 +450,7 @@ namespace NUnitMigrator.Core.RewriterLogic
         public override SyntaxNode VisitInvocationExpression(InvocationExpressionSyntax node)
         {
             SymbolInfo info;
+            var unsupportedCount = Unsupported.Count;
             try
             {
                 info = _semanticModel.GetSymbolInfo(node);
@@ -460,6 +461,8 @@ namespace NUnitMigrator.Core.RewriterLogic
             }
             var prevNode = node;
             node = HandleInvocationExpression(node, info);
+            if (_options.CommentUnsupported && unsupportedCount < Unsupported.Count && node.ToString().StartsWith("Assert"))
+                node = (InvocationExpressionSyntax)node.CommentMultiline();
             if (prevNode != node)
                 ChangesAmount++;
             node = base.VisitInvocationExpression(node) as InvocationExpressionSyntax;
@@ -786,7 +789,6 @@ namespace NUnitMigrator.Core.RewriterLogic
                     NodeName = node.ToString()
                 });
             }
-
             return node;
         }
 
@@ -914,7 +916,8 @@ namespace NUnitMigrator.Core.RewriterLogic
             var arg = node.ArgumentList.Arguments[0];
             var type = _semanticModel.GetTypeInfo(arg.Expression);
 
-
+            var oldNode = node;
+            var unsupportedCount = Unsupported.Count;
             if (type.ConvertedType?.SpecialType == SpecialType.System_String)
             {
                 node = TransformStringConstraints(node, memberAccess, constraintMemberAccess, hasNot, out bool hasChanged);
@@ -940,6 +943,15 @@ namespace NUnitMigrator.Core.RewriterLogic
             else if (contstraintType.StartsWith("Has"))
             {
                 node = TransformHasConstraints(node, memberAccess, constraintMemberAccess, hasNot);
+            }
+            if (unsupportedCount == Unsupported.Count && oldNode == node)
+            {
+                Unsupported.Add(new UnsupportedNodeInfo
+                {
+                    Info = "Unsupported expression",
+                    Location = node.GetLocation(),
+                    NodeName = node.ToString()
+                });
             }
             return node;
         }
@@ -1121,6 +1133,15 @@ namespace NUnitMigrator.Core.RewriterLogic
             else if ("Contain".Equals(constraintName))
             {
                 node = TransformContainConstraintOrExpression(node, memberAccess, hasNot);
+            }
+            else
+            {
+                Unsupported.Add(new UnsupportedNodeInfo
+                {
+                    Info = "Unsupported Does expression",
+                    Location = node.GetLocation(),
+                    NodeName = node.ToString()
+                });
             }
             return node;
         }

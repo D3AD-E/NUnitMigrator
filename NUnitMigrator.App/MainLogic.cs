@@ -15,7 +15,7 @@ namespace NUnitMigrator.App.Logic
 {
     internal class MainLogic
     {
-        public static async void Migrate(string path, RewriterOptions options = null)
+        public static async void Migrate(string path, string projectName=null, RewriterOptions options = null)
         {
             var visualStudioInstances = MSBuildLocator.QueryVisualStudioInstances().ToArray();
             var instance = visualStudioInstances.Length == 1 ? visualStudioInstances[0]
@@ -36,15 +36,14 @@ namespace NUnitMigrator.App.Logic
                 foreach (var projectId in solution.ProjectIds)
                 {
                     var project = solution.GetProject(projectId);
+                    if (projectName!=null && !project.Name.StartsWith(projectName))
+                        continue;
                     Console.WriteLine($"Project.Name: {project.Name}");
                     Console.WriteLine($"Project.CompilationOptions.Platform: {project.CompilationOptions.Platform}");
                     Console.WriteLine($"Project.CompilationOptions.Language: {project.CompilationOptions.Language}");
                     Console.WriteLine($"Project.CompilationOptions.OptimizationLevel: {project.CompilationOptions.OptimizationLevel}");
                     Console.WriteLine($"Project.CompilationOptions.WarningLevel: {project.CompilationOptions.WarningLevel}");
                     Console.WriteLine($"Project.CompilationOptions.OutputKind: {project.CompilationOptions.OutputKind}");
-
-                    if (!project.Name.Equals("nunit.framework.tests(net46)"))
-                        continue;
 
                     foreach (var documentId in project.DocumentIds)
                     {

@@ -26,12 +26,12 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Collections.Generic;
 public class A
 {
-    /*[TestMethod]
+    [TestMethod]
     public void Test()
     {
         var testme = new List<int>();
-        CollectionAssert.IsOrdered(testme);
-    }*/
+        /*CollectionAssert.IsOrdered(testme)*/;
+    }
 }";
             var actual = TestSupport.RunTest(input, new Core.RewriterLogic.Data.RewriterOptions { CommentUnsupported = true });
             Assert.AreEqual(expected, actual.Text);
