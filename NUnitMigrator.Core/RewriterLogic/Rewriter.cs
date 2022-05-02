@@ -461,7 +461,7 @@ namespace NUnitMigrator.Core.RewriterLogic
             }
             var prevNode = node;
             node = HandleInvocationExpression(node, info);
-            if (_options.CommentUnsupported && unsupportedCount < Unsupported.Count && node.ToString().StartsWith("Assert"))
+            if (_options.CommentUnsupported && unsupportedCount < Unsupported.Count && node.ToString().Contains("Assert"))
                 node = (InvocationExpressionSyntax)node.CommentMultiline();
             if (prevNode != node)
                 ChangesAmount++;
@@ -688,7 +688,15 @@ namespace NUnitMigrator.Core.RewriterLogic
                 var memberName = stringMemberAccess.Name?.ToString();
                 if ("Contains".Equals(memberName) || "StartsWith".Equals(memberName) || "EndsWith".Equals(memberName))
                 {
-                    //ignored
+                    
+                    var argList = new SeparatedSyntaxList<ArgumentSyntax>();
+                    argList = argList.Add(node.ArgumentList.Arguments[1]);
+                    argList = argList.Add(node.ArgumentList.Arguments[0]);
+                    var remainingArguments = node.ArgumentList.Arguments.Skip(2);
+                    if (remainingArguments.Any())
+                        argList = argList.AddRange(remainingArguments);
+                    node = node.WithExpression(stringMemberAccess).WithArgumentList(
+                         SyntaxFactory.ArgumentList(argList).NormalizeWhitespace());
                     return node;
                 }
                 else if("DoesNotContain".Equals(memberName))
